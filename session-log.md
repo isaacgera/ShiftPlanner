@@ -353,3 +353,11 @@
 3. Run `git push origin main` from terminal (needs credentials)
 4. Bump `CACHE_NAME` in `sw.js` for PWA users to get the update
 5. Wait 1-2 min for GitHub Pages to deploy
+
+
+### Update — HK Offs Tuned to 4
+- Target distribution confirmed:
+  - 30-day month: M=6, MA=4, A=6, N=10, O=4 (all 3 staff identical)
+  - 31-day month: M=6/7, MA=4, A=6/7, N=10/11, O=4 (rotational fairness)
+- Off spacing relaxed to [5,8] with fallback to [4] to guarantee all 4 offs placed
+- Phase 4 MA balancing target = 4 per staff (12 total offs ÷ 3 = 4 MA each)

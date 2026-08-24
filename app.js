@@ -123,7 +123,7 @@ function generateRotaForMonth(y,m,tab,existingRota,edits){
     var hkBlockLen=hkRules.shifts&&hkRules.shifts.blockLength?hkRules.shifts.blockLength:[10,11];
     var hkTargetOffs=(hkRules.dayOff&&hkRules.dayOff.targetPerStaff)?hkRules.dayOff.targetPerStaff:4;
     var hkMaxOffPerDay=(hkRules.dayOff&&hkRules.dayOff.maxPerDay)?hkRules.dayOff.maxPerDay:1;
-    var hkOffSpacing=(hkRules.dayOff&&hkRules.dayOff.spacing)?hkRules.dayOff.spacing:[6,8];
+    var hkOffSpacing=(hkRules.dayOff&&hkRules.dayOff.spacing)?hkRules.dayOff.spacing:[5,8];
 
     // --- PHASE 1: Assign shifts in 10-11 day blocks ---
     // With 3 staff and 3 shifts, divide month into 3 phases of ~10-11 days each.
@@ -251,6 +251,25 @@ function generateRotaForMonth(y,m,tab,existingRota,edits){
           rota[nurses[i].name][bestDay]='O';
           placedOffs.push(bestDay);
           if(candidates[bestCand].coverIdx>=0)maTracker[candidates[bestCand].coverIdx]++;
+        }
+      }
+      // Fallback: if fewer than numOffs placed, relax spacing to guarantee exactly 4
+      if(placedOffs.length<numOffs){
+        for(var ci=0;ci<candidates.length&&placedOffs.length<numOffs;ci++){
+          var cand=candidates[ci];
+          if(cand.used)continue;
+          var d=cand.day;
+          if(rota[nurses[i].name][d]==='O')continue;
+          var tooClose=false;
+          for(var oi=0;oi<placedOffs.length;oi++){if(Math.abs(d-placedOffs[oi])<4)tooClose=true}
+          if(tooClose)continue;
+          var dayHasOff2=false;
+          for(var j=0;j<nc;j++){if(j!==i&&(rota[nurses[j].name][d]==='O'||rota[nurses[j].name][d]==='PL'))dayHasOff2=true}
+          if(dayHasOff2)continue;
+          cand.used=true;
+          rota[nurses[i].name][d]='O';
+          placedOffs.push(d);
+          if(cand.coverIdx>=0)maTracker[cand.coverIdx]++;
         }
       }
     }
