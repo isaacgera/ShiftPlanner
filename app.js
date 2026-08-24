@@ -29,9 +29,23 @@ function editOrgName(){
 }
 
 function getDefaultStaff(){return{
-  nurses:[],
-  housekeeping:[],
-  incompatiblePairs:[]
+  nurses:[
+    {name:'SAROJA',role:'nurse',active:true,nightPref:[]},
+    {name:'VASANTHA',role:'nurse',active:true,nightPref:[]},
+    {name:'PUNNAMMA',role:'nurse',active:true,nightPref:[]},
+    {name:'SUVARNA',role:'nurse',active:true,nightPref:[]},
+    {name:'SANDHYA',role:'nurse',active:true,nightPref:[]},
+    {name:'SHAILAJA',role:'nurse',active:true,nightPref:[]},
+    {name:'VIJAYA',role:'nurse',active:true,nightPref:[1,3]},
+    {name:'JAYA',role:'g-shift',active:true}
+  ],
+  housekeeping:[
+    {name:'MANJULA',role:'housekeeping',active:true,nightPref:[]},
+    {name:'ESHWARI',role:'housekeeping',active:true,nightPref:[]},
+    {name:'MALLAMMA',role:'housekeeping',active:true,nightPref:[]},
+    {name:'GITA',role:'g-shift',active:true}
+  ],
+  incompatiblePairs:[['SUVARNA','PUNNAMMA'],['VIJAYA','SHAILAJA']]
 }}
 
 function loadStaff(){
