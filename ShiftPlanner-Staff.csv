@@ -1,0 +1,19 @@
+OrgName,Sanctum Natural Birth Centre
+
+Tab,Name,Role,Active,NightPref
+nurses,SAROJA,nurse,yes,
+nurses,VASANTHA,nurse,yes,
+nurses,PUNNAMMA,nurse,yes,
+nurses,SUVARNA,nurse,yes,
+nurses,SANDHYA,nurse,yes,
+nurses,SHAILAJA,nurse,yes,
+nurses,VIJAYA,nurse,yes,1;3
+nurses,JAYA,g-shift,yes,
+housekeeping,MANJULA,housekeeping,yes,
+housekeeping,ESHWARI,housekeeping,yes,
+housekeeping,MALLAMMA,housekeeping,yes,
+housekeeping,GITA,g-shift,yes,
+
+IncompatiblePairs
+pair,SUVARNA,PUNNAMMA
+pair,VIJAYA,SHAILAJA
