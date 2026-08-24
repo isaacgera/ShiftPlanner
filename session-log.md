@@ -284,3 +284,72 @@
 3. **Test across multiple months** — verify monthly rotation fairness for both tabs
 4. **Remove console.log debug statements** before release
 5. **Cache-busting `?v=5`** on script tags — remove when stable
+
+---
+
+## Session 5 — Aug 22, 2026
+**Nurses N-Distribution Fix + HK Offs Update + PWA Deployment**
+**AI Partner:** Forje
+
+### What Was Done
+
+#### Nurses N-Distribution — Fixed
+- Replaced day-by-day N-assignment with **pre-planned block schedule**
+  - 7 blocks of 4-5 days per month, 2 nurses per block
+  - Pairing formula: `n1=(b+monthOffset)%7`, `n2=(b+3+monthOffset)%7` — guarantees no nurse in adjacent blocks
+  - Each nurse appears exactly 2 times = 8-9 N per nurse (capped at 9 in write loop)
+  - Max 5 consecutive N enforced after write (clears excess, filled by M/A in Step 2)
+- Removed Step 6 (max-5-nights) that was destroying valid blocks
+- Removed Step 8 (standalone N cleanup) — blocks are pre-planned correctly
+- Incompatible pairs only enforced on M/A (never break N-blocks)
+- Night week preference: swaps block positions without creating adjacency (validated before applying)
+- **Result:** N-counts consistently 8-9 per nurse across multiple months
+
+#### HouseKeeping — 4 Offs
+- Changed targetPerStaff from 3 to 4
+- Spacing reduced from [8,11] to [6,8] to accommodate 4 offs
+- MA target updated to 4 per staff (12 total offs ÷ 3 staff = 4 MA each)
+- Expected distribution: ~10-11 N, ~7 M, ~7 A, ~4 MA, 4 O per 31-day month
+
+#### PWA Setup
+- Created `manifest.json` (app name, theme, standalone display, SVG icons)
+- Created `sw.js` (service worker — cache-first, offline support)
+- Created `icons/icon-192.svg`, `icons/icon-512.svg`, `icons/icon-maskable.svg`
+- Added PWA meta tags to `ShiftPlanner.html` (manifest link, theme-color, Apple metas, SW registration)
+- Note: Chrome requires PNG icons for install prompt — SVG works for manifest but not installability
+
+#### GitHub Pages Deployment
+- Repo: `https://github.com/isaacgera/ShiftPlanner`
+- Live URL: `https://isaacgera.github.io/ShiftPlanner/ShiftPlanner.html`
+- User Guide: `https://isaacgera.github.io/ShiftPlanner/UserGuide.html`
+- Deploy workflow: `git add -A` → `git commit -m "msg"` → `git push origin main`
+
+#### Other
+- Restored default staff in `getDefaultStaff()` (app loads ready-to-use without import)
+- Regenerated `ShiftPlanner-Staff.json` and `.csv` backup files
+- Created `UserGuide.html` — comprehensive single-file user guide
+- Organisation name made dynamic (click to edit, stored in localStorage, included in export/import)
+
+### Files in Repo
+- `ShiftPlanner.html` — the app (UI + CSS)
+- `app.js` — all logic (generation, editing, export, highlighting)
+- `rules.js` — configurable shift rules (nurses + housekeeping)
+- `sw.js` — service worker for PWA offline caching
+- `manifest.json` — PWA manifest
+- `UserGuide.html` — user documentation
+- `icons/` — SVG app icons (192, 512, maskable)
+- `session-log.md` — development history
+- `ShiftPlanner-Staff.json` + `.csv` — staff backup files
+
+### Known Limitations
+- PWA install prompt requires PNG icons (SVG works for manifest but Chrome won't show install banner)
+- "Add to Home Screen" on mobile works regardless
+- N-distribution: occasionally one nurse gets 10N if both their blocks are 5-day blocks (rare, acceptable)
+- File:// protocol shows "unsafe" console warning (normal — use hosted version instead)
+
+### Deployment Checklist for Updates
+1. Make changes to files
+2. `git add -A && git commit -m "description"`
+3. Run `git push origin main` from terminal (needs credentials)
+4. Bump `CACHE_NAME` in `sw.js` for PWA users to get the update
+5. Wait 1-2 min for GitHub Pages to deploy

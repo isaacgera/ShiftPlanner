@@ -192,7 +192,7 @@ function generateRotaForMonth(y,m,tab,existingRota,edits){
       }
     }
 
-    // --- PHASE 2: Place exactly 3 offs per staff, balanced so each staff covers exactly 3 MAs ---
+    // --- PHASE 2: Place exactly 4 offs per staff, balanced so each staff covers exactly 4 MAs ---
     // Strategy: place offs such that MA burden is evenly distributed.
     // For each off, determine who would cover (get MA). Track counts and prefer days
     // where the under-burdened staff would cover.
@@ -280,9 +280,9 @@ function generateRotaForMonth(y,m,tab,existingRota,edits){
       }
     }
 
-    // --- PHASE 4: Balance MA count — ensure each staff has exactly 3 MAs ---
+    // --- PHASE 4: Balance MA count — ensure each staff has exactly 4 MAs ---
     // Count current MA per staff. If uneven, swap offs between days to rebalance.
-    var targetMA=(typeof hkTargetOffs==='number')?hkTargetOffs:3;
+    var targetMA=(typeof hkTargetOffs==='number')?hkTargetOffs:4;
     var maCounts=new Array(nc).fill(0);
     for(var i=0;i<nc;i++){for(var d=0;d<days;d++){if(rota[nurses[i].name][d]==='MA')maCounts[i]++}}
 
