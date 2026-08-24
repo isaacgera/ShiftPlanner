@@ -113,9 +113,9 @@ var RULES = {
       targetPerStaff: [9, 11]         // Each staff gets ~9-11 of each shift type per month
     },
     dayOff: {
-      targetPerStaff: 3,       // Each staff MUST get exactly 3 offs per month
+      targetPerStaff: 4,       // Each staff MUST get exactly 4 offs per month
       maxPerDay: 1,            // Max 1 staff off per day (only 3 staff)
-      spacing: [8, 11],        // Offs spaced 8-11 days apart
+      spacing: [6, 8],         // Offs spaced 6-8 days apart
       allowedFrom: ['M','A'],  // Offs can be taken from M or A shift days (NEVER from N)
       noOffDuringN: true       // HARD RULE: No off during Night block
     },
