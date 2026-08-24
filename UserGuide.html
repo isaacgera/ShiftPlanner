@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ShiftPlanner — User Guide</title>
+<style>
+:root{--primary:#6366f1;--accent:#8B6914;--bg:#faf8f4;--surface:#fff;--text:#1e293b;--text-light:#64748b;--border:#e5e0d0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.7;padding:2rem 1rem}
+.guide{max-width:900px;margin:0 auto}
+h1{color:var(--primary);font-size:2rem;margin-bottom:.5rem}
+h1 span{display:block;font-size:1rem;color:var(--text-light);font-weight:400}
+h2{color:var(--accent);font-size:1.3rem;margin-top:2.5rem;margin-bottom:.8rem;padding-bottom:.3rem;border-bottom:2px solid var(--border)}
+h3{color:var(--primary);font-size:1.05rem;margin-top:1.5rem;margin-bottom:.5rem}
+p,li{margin-bottom:.6rem;font-size:.95rem}
+ul,ol{padding-left:1.5rem;margin-bottom:1rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin:1rem 0;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.shift-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:700;font-size:.85rem;margin-right:.3rem}
+.shift-M{background:#dbeafe;color:#1e40af}
+.shift-G{background:#dcfce7;color:#166534}
+.shift-A{background:#fff7ed;color:#9a3412}
+.shift-N{background:#f1f5f9;color:#0f172a}
+.shift-O{background:#fee2e2;color:#b91c1c}
+.shift-MA{background:#dbeafe;color:#7c2d12}
+.tip{background:#eff6ff;border-left:4px solid var(--primary);padding:.8rem 1rem;margin:1rem 0;border-radius:0 8px 8px 0;font-size:.9rem}
+.warn{background:#fef3c7;border-left:4px solid #d97706;padding:.8rem 1rem;margin:1rem 0;border-radius:0 8px 8px 0;font-size:.9rem}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}
+th,td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+th{background:#f8f6f0;font-weight:600}
+kbd{background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:.8rem;font-family:monospace}
+@media print{body{padding:1cm}h2{page-break-before:auto}}
+</style>
+</head>
+<body>
+<div class="guide">
+
+<h1>ShiftPlanner <span>User Guide</span></h1>
+<p style="color:var(--text-light);margin-bottom:2rem">A shift rota generator for healthcare institutions. Generates fair, balanced monthly schedules for Nurses and HouseKeeping staff.</p>
+
+<h2>1. Getting Started</h2>
+
+<h3>First Time Setup</h3>
+<ol>
+<li>Open <kbd>ShiftPlanner.html</kbd> in your browser (Chrome, Edge, or Firefox recommended).</li>
+<li>You'll see "No staff configured" — click <b>Staff Setup</b> to add your team.</li>
+<li>Add each staff member with their name and role:
+  <ul>
+    <li><b>Nurse</b> — regular shift-working nurse</li>
+    <li><b>HouseKeeping</b> — housekeeping staff</li>
+    <li><b>G-Shift</b> — the person on fixed General shift (10AM–6PM daily, off Sundays)</li>
+  </ul>
+</li>
+<li>Set your organisation name by clicking the text under "ShiftPlanner" in the header.</li>
+<li>Click <b>Generate</b> to create your first rota.</li>
+</ol>
+
+<div class="tip">Your staff data is saved in the browser's localStorage. It persists across sessions but will be lost if you clear browser cache. Use <b>Export JSON</b> in Staff Setup to back up your data.</div>
+
+<h3>Installing as an App (PWA)</h3>
+<p>When hosted on a web server (e.g., GitHub Pages), you can install ShiftPlanner as an app:</p>
+<ul>
+<li><b>Desktop (Chrome/Edge):</b> Click the install icon in the address bar, or Menu → "Install ShiftPlanner"</li>
+<li><b>Mobile (Android):</b> Tap Menu → "Add to Home Screen"</li>
+<li><b>Mobile (iPhone):</b> Tap Share → "Add to Home Screen"</li>
+</ul>
+<p>Once installed, it works fully offline — no internet needed.</p>
+
+<h2>2. Layout Overview</h2>
+
+<div class="card">
+<p><b>Header Row 1:</b> App title + Organisation name | Month title (centered) | Month picker + Generate + Save + Undo</p>
+<p><b>Header Row 2:</b> Tabs (Nurses / HouseKeeping) | Shift legend (centered) | Staff Setup + Export PDF</p>
+<p><b>Main Area:</b> Rota table (names × days) + Shift Count summary table</p>
+</div>
+
+<h2>3. Shift Types</h2>
+
+<table>
+<tr><th>Code</th><th>Shift</th><th>Timing</th><th>Notes</th></tr>
+<tr><td><span class="shift-badge shift-M">M</span></td><td>Morning</td><td>8AM – 2PM</td><td>2 nurses per day</td></tr>
+<tr><td><span class="shift-badge shift-G">G</span></td><td>General</td><td>10AM – 6PM</td><td>Fixed person, off Sundays</td></tr>
+<tr><td><span class="shift-badge shift-A">A</span></td><td>Afternoon</td><td>2PM – 8PM</td><td>2 nurses per day</td></tr>
+<tr><td><span class="shift-badge shift-N">N</span></td><td>Night</td><td>8PM – 8AM</td><td>2 nurses, 4-5 day blocks</td></tr>
+<tr><td><span class="shift-badge shift-O">O</span></td><td>Day Off</td><td>—</td><td>4 per nurse per month</td></tr>
+<tr><td><span class="shift-badge shift-MA">MA</span></td><td>Morning + Afternoon</td><td>8AM – 8PM</td><td>Used to cover gaps (minimal)</td></tr>
+</table>
+
+<h2>4. Generating a Rota</h2>
+
+<h3>Nurses Tab</h3>
+<p>For 7 nurses + 1 G-shift person:</p>
+<ul>
+<li>Each nurse gets ~9M + 9A + 9N + 4O per 31-day month</li>
+<li>Night shifts are in blocks of 4-5 consecutive days (never broken by offs)</li>
+<li>Offs are spaced ~5-8 days apart, never during Night blocks</li>
+<li>Maximum 1 nurse off per day</li>
+<li>MA is used only when mathematically necessary (0-2 per nurse)</li>
+<li>Incompatible pairs are never on the same M/A shift together</li>
+</ul>
+
+<h3>HouseKeeping Tab</h3>
+<p>For 3 housekeeping staff + 1 G-shift person:</p>
+<ul>
+<li>3 phases of ~10-11 days: each staff rotates through M → A → N</li>
+<li>3 offs per staff, only from M/A days (never during Night phase)</li>
+<li>When someone is off, the M-person covers MA (Morning + Afternoon)</li>
+<li>Monthly rotation ensures different starting positions each month</li>
+</ul>
+
+<h3>Night Shift Preference</h3>
+<p>In Staff Setup, each nurse/HK staff can set preferred weeks for Night shift:</p>
+<ul>
+<li><b>Nurses:</b> W1 (days 1-7), W2 (days 8-14), W3 (days 15-21), W4 (days 22-31)</li>
+<li><b>HouseKeeping:</b> P1 (phase 1), P2 (phase 2), P3 (phase 3)</li>
+</ul>
+<p>The algorithm honours preferences as a best-effort — it places preferred nurses in their chosen weeks when possible without disrupting fairness.</p>
+
+<h2>5. Editing the Rota</h2>
+
+<h3>Click-to-Edit</h3>
+<ol>
+<li>Click any shift cell in the rota table.</li>
+<li>A popup appears with all shift options (M, G, A, N, O, PL, MA, AN).</li>
+<li>Select the new shift — it's applied immediately.</li>
+<li>If the change violates a rule (coverage, incompatible pair), a warning appears. You can "Apply Anyway" or cancel.</li>
+</ol>
+
+<h3>Save, Undo, Re-generate</h3>
+<ul>
+<li><b>Save:</b> Appears after manual edits. Confirms your changes are stored.</li>
+<li><b>Undo:</b> Reverts the last manual change (up to 20 levels).</li>
+<li><b>Re-generate:</b> Creates a new rota but preserves all your manual edits. Useful if you want the algorithm to fix the remaining cells around your locked changes.</li>
+</ul>
+
+<h3>Add Off on Fully-Staffed Days</h3>
+<p>Days with full coverage show a green <b>*</b> in the date header. Click it to assign an off to an eligible nurse.</p>
+
+<h2>6. Staff Setup</h2>
+
+<h3>Managing Staff</h3>
+<ul>
+<li><b>Add:</b> Type a name and click Add. They're added with the default role for the current tab.</li>
+<li><b>Rename:</b> Click the name or the ✏️ icon. Updates the rota data automatically.</li>
+<li><b>Role:</b> Change via the dropdown (Nurse / HouseKeeping / G-Shift).</li>
+<li><b>Active/Inactive:</b> Uncheck to exclude from rota generation without deleting.</li>
+<li><b>Remove:</b> Click the × button to delete permanently.</li>
+</ul>
+
+<h3>Incompatible Pairs</h3>
+<p>Select two nurses who should never be on the same M or A shift together. They can still be on Night together (blocks are pre-planned).</p>
+
+<h3>Backup / Restore</h3>
+<ul>
+<li><b>Export JSON:</b> Downloads all staff data (names, roles, preferences, incompatible pairs, org name) as a JSON file.</li>
+<li><b>Export CSV:</b> Same data in spreadsheet-friendly format.</li>
+<li><b>Import:</b> Upload a previously exported JSON or CSV file to restore staff data after a cache clear or on a new device.</li>
+</ul>
+
+<div class="warn"><b>Important:</b> After clearing browser cache, your staff and rota data will be lost. Always keep an exported backup file. Use Import to restore.</div>
+
+<h2>7. Shift Count Table</h2>
+
+<p>Below the rota, a summary shows each person's shift totals:</p>
+<table>
+<tr><th>Column</th><th>Meaning</th></tr>
+<tr><td>G</td><td>General shift days</td></tr>
+<tr><td>M</td><td>Morning shift days (excludes MA)</td></tr>
+<tr><td>MA</td><td>Morning+Afternoon combo days</td></tr>
+<tr><td>A</td><td>Afternoon shift days (excludes MA/AN)</td></tr>
+<tr><td>AN</td><td>Afternoon+Night combo days</td></tr>
+<tr><td>N</td><td>Night shift days (excludes AN)</td></tr>
+<tr><td>O</td><td>Off days</td></tr>
+<tr><td>PL</td><td>Planned Leave days</td></tr>
+<tr><td>Total</td><td>Days in month</td></tr>
+</table>
+
+<h3>Interactive Highlighting</h3>
+<ul>
+<li>Click a <b>name</b> in the summary → highlights that person's entire row in the rota</li>
+<li>Click a <b>count cell</b> → highlights those specific shift cells for that person</li>
+<li>Click a <b>column header</b> (M/A/N etc.) → highlights all cells of that shift type</li>
+<li>Click outside the summary table to clear highlights</li>
+</ul>
+
+<h2>8. Export PDF / Print</h2>
+
+<ol>
+<li>Click <b>Export PDF</b> (bottom-right of header).</li>
+<li>The browser's print dialog opens with:
+  <ul>
+    <li>Filename: <kbd>ShiftPlanner Nurses August 2026</kbd> (auto-generated)</li>
+    <li>Layout: A4 Landscape</li>
+    <li>Content: Header + active tab label + legend + rota table + shift count — all within a border</li>
+  </ul>
+</li>
+<li>Select "Save as PDF" or print directly.</li>
+</ol>
+
+<div class="tip">The PDF is designed to fit on a single A4 landscape page. Share it via WhatsApp or print for wall display.</div>
+
+<h2>9. Monthly Workflow</h2>
+
+<p>Recommended monthly process:</p>
+<ol>
+<li>Select the upcoming month from the month picker.</li>
+<li>Click <b>Generate</b> to create the rota.</li>
+<li>Review the rota visually — check N-blocks, offs spacing, coverage.</li>
+<li>Make manual adjustments if needed (click cells to edit).</li>
+<li>Click <b>Export PDF</b> to save/print.</li>
+<li>Share the PDF via WhatsApp or pin it on the noticeboard.</li>
+<li>Repeat for HouseKeeping tab.</li>
+</ol>
+
+<h2>10. Tips and Notes</h2>
+
+<ul>
+<li>Generate rotas up to 5 months in advance using the month picker.</li>
+<li>The algorithm rotates positions each month — no nurse always gets the same pattern.</li>
+<li>PL (Planned Leave) is manual-only. Click a cell and select PL. It's preserved on Re-generate.</li>
+<li>The app works entirely in the browser — no data is sent to any server.</li>
+<li>All data is stored locally in your browser's localStorage.</li>
+<li>For best results, use Chrome or Edge on desktop for generation, then share the PDF.</li>
+</ul>
+
+<h2>11. Troubleshooting</h2>
+
+<table>
+<tr><th>Issue</th><th>Solution</th></tr>
+<tr><td>Staff names gone after reload</td><td>Cache was cleared. Import your backup JSON/CSV from Staff Setup.</td></tr>
+<tr><td>Generate button does nothing</td><td>No staff configured for this tab. Open Staff Setup and add team members.</td></tr>
+<tr><td>Rota shows unexpected patterns</td><td>Click Re-generate for a fresh calculation. Check night preferences aren't conflicting.</td></tr>
+<tr><td>PDF doesn't fit on one page</td><td>Ensure browser is set to A4 Landscape with margins ~0.8cm.</td></tr>
+<tr><td>App won't install as PWA</td><td>Must be hosted on HTTPS (e.g., GitHub Pages). Won't work from file:// URLs.</td></tr>
+</table>
+
+<hr style="margin-top:3rem;border:none;border-top:1px solid var(--border)">
+<p style="text-align:center;color:var(--text-light);font-size:.8rem;margin-top:1rem">ShiftPlanner — Built with care for healthcare teams everywhere.</p>
+
+</div>
+</body>
+</html>
