@@ -9,10 +9,10 @@
 
 ## Cleanup & Polish (Priority: High)
 
-- [ ] Remove all `console.log` debug statements from `app.js`
-- [ ] Remove cache-busting `?v=5` from `<script>` tags in `ShiftPlanner.html` (use SW cache versioning instead)
-- [ ] Bump `CACHE_NAME` in `sw.js` after cleanup changes
-- [ ] Convert SVG icons to PNG (192px, 512px) for Chrome PWA install banner support
+- [x] Remove all `console.log` debug statements from `app.js` (Session 6 — also removed a dead no-op diagnostic loop; SW-registration log downgraded to `console.warn`)
+- [x] Remove cache-busting `?v=5` from `<script>` tags in `ShiftPlanner.html` (Session 6 — rely on SW cache versioning)
+- [x] Bump `CACHE_NAME` in `sw.js` after cleanup changes (Session 6 — `shiftplanner-v4` → `v5`)
+- [~] Convert SVG icons to PNG (192px, 512px) for Chrome PWA install banner support (Session 6 — manifest/HTML/SW wired for PNG + browser-based generator `icons/generate-png-icons.html` created; **manual step remaining:** open the generator and download the 3 PNGs into `icons/` before next deploy)
 
 ---
 

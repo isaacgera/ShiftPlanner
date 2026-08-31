@@ -361,3 +361,57 @@
   - 31-day month: M=6/7, MA=4, A=6/7, N=10/11, O=4 (rotational fairness)
 - Off spacing relaxed to [5,8] with fallback to [4] to guarantee all 4 offs placed
 - Phase 4 MA balancing target = 4 per staff (12 total offs ÷ 3 = 4 MA each)
+
+---
+
+## Session 6 — Aug 30, 2026
+**Cleanup / Release Hygiene**
+**AI Partner:** Forjé
+
+### What Was Done
+
+#### Debug logging removed (`app.js`)
+- Removed 3 debug `console.log` statements (nurses/days summary, N-Schedule dump, N-Appearances dump)
+- Removed a dead no-op diagnostic loop that checked for adjacent-block conflicts but only logged (the real correction happens in the appearances-fix loop below it) — replaced with an explanatory comment
+- `app.js` and `rules.js` now contain zero `console.*` statements
+
+#### Cache-busting query strings removed (`ShiftPlanner.html`)
+- Removed `?v=5` from both `<script src="rules.js">` and `<script src="app.js">` tags — SW `CACHE_NAME` versioning is the single mechanism for cache invalidation now
+- Downgraded the SW-registration failure `console.log` to `console.warn` (kept — it's a legitimate non-fatal error handler)
+
+#### PNG icons for Chrome install banner
+- Chrome requires PNG icons to show the "Install app" banner (SVG works for the manifest but not installability)
+- **No raster tooling on this machine** (no ImageMagick/Inkscape/Node; the `python.exe` is the non-functional Windows Store stub), so created a zero-dependency browser-based generator: **`icons/generate-png-icons.html`**
+  - Draws the icon on a `<canvas>` matching the existing SVG design (indigo `#6366f1`, white "SP", `#c7d2fe` "ShiftPlanner" label)
+  - One-click downloads for `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` (maskable uses full-bleed background + ~82% safe-zone scaling)
+- `manifest.json`: now lists the 3 PNGs first (192, 512, maskable-512), with the 2 SVGs kept as scalable fallbacks
+- `ShiftPlanner.html`: favicon + apple-touch-icon now point to `icon-192.png`
+- `sw.js`: `CACHE_NAME` bumped `shiftplanner-v4` → `shiftplanner-v5`; `ASSETS` precache list now includes the 3 PNGs + 2 SVGs
+
+### Verification
+- IDE diagnostics clean on `app.js`, `ShiftPlanner.html`, `sw.js`, `manifest.json` (no errors)
+- Confirmed via `findstr`: no `?v=` anywhere, no `console.*` in `app.js`/`rules.js`, icon references consistent across HTML/manifest/SW
+- **Not yet verified in a live browser** (Windows shell can't run a server here reliably) — see manual checks below
+
+### ⚠️ Remaining Manual Step (do before next deploy)
+1. Open `icons/generate-png-icons.html` in a browser (double-click, or via Live Server)
+2. Click each of the 3 Download buttons; save the files into the `icons/` folder with the exact names shown
+3. **Important:** the SW `ASSETS` list now references those PNGs, and `cache.addAll()` is all-or-nothing — if the PNGs don't exist at deploy time, the service worker install will fail. Generate them first.
+
+### Manual Checks Suggested
+- Load `ShiftPlanner.html` via Live Server (not `file://`), open DevTools → Application → Manifest: confirm PNG icons resolve and "Add to Home screen / Install" is offered
+- Confirm the tab favicon shows the SP icon
+- Regenerate a rota (Nurses + HouseKeeping) to confirm the `app.js` edits didn't affect generation
+
+### Deploy Checklist
+1. Generate the 3 PNGs (above)
+2. `git add -A && git commit -m "Cleanup: remove debug logs + cache-bust, add PNG icons, bump SW to v5"`
+3. `git push origin main`
+4. SW `CACHE_NAME` already bumped to `v5` — existing PWA users will pull the update
+
+### Files Modified
+- `app.js` — removed debug logs + dead diagnostic loop
+- `ShiftPlanner.html` — removed `?v=5`, PNG favicon/apple-touch-icon, `console.warn`
+- `manifest.json` — PNG icons added (SVG kept as fallback)
+- `sw.js` — `CACHE_NAME` v4→v5, PNGs added to precache
+- `icons/generate-png-icons.html` — **new** browser-based PNG generator

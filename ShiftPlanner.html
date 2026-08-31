@@ -9,8 +9,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ShiftPlanner">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icons/icon-192.svg">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>ShiftPlanner</title>
 <style>
 :root{--primary:#6366f1;--accent:#8B6914;--bg:#faf8f4;--surface:#fff;--text:#1e293b;--text-light:#64748b;--border:#e5e0d0;--radius:10px}
@@ -209,10 +209,10 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
   <div class="alert-overlay" id="alert-overlay"><div class="alert-box" id="alert-box"></div></div>
 </div>
 
-<script src="rules.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="rules.js"></script>
+<script src="app.js"></script>
 <script>
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(function(e){console.log('SW registration failed:',e)})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(function(e){console.warn('SW registration failed:',e)})}
 </script>
 </body>
 </html>

@@ -111,7 +111,6 @@ function generateRotaForMonth(y,m,tab,existingRota,edits){
 
   if(gPerson){for(var d=0;d<days;d++)rota[gPerson.name][d]=getDow(y,m,d+1)===0?'O':'G'}
   if(!nc)return rota;
-  console.log('ShiftPlanner v5: nurses='+nc+', days='+days+', gPerson='+(gPerson?gPerson.name:'none'));
 
   // --- HOUSEKEEPING: 3-staff rotation (1M+1A+1N per day, 10-11 day blocks) ---
   // Completely separate logic from nurses.
@@ -453,16 +452,8 @@ function generateRotaForMonth(y,m,tab,existingRota,edits){
   }
 
   // Verify no consecutive block conflicts (should be clean by construction, but safety check)
-  for(var b=0;b<numBlocks-1;b++){
-    var all1=[schedule[b][0],schedule[b][1]];
-    var all2=[schedule[b+1][0],schedule[b+1][1]];
-    for(var s=0;s<2;s++){
-      if(all2.indexOf(all1[s])>=0){
-        // Should not happen with +3 offset, but just in case — log it
-        console.log('WARNING: Nurse '+all1[s]+' in adjacent blocks '+b+' and '+(b+1));
-      }
-    }
-  }
+  // Note: the +3 pairing offset prevents a nurse landing in adjacent blocks.
+  // Any residual over/under-allocation is corrected by the appearances-fix loop below.
 
   // Verify each nurse appears exactly 2 times (and fix if not)
   var appearances=new Array(nc).fill(0);
@@ -512,10 +503,6 @@ function generateRotaForMonth(y,m,tab,existingRota,edits){
   }
 
   // Write N-blocks to rota (cap at 9N per nurse)
-  console.log('N-Schedule: '+JSON.stringify(schedule)+' numBlocks='+numBlocks+' nc='+nc+' monthOffset='+monthOffset);
-  var appCheck=new Array(nc).fill(0);
-  for(var b=0;b<numBlocks;b++){appCheck[schedule[b][0]]++;appCheck[schedule[b][1]]++}
-  console.log('N-Appearances: '+JSON.stringify(appCheck));
   var nWritten=new Array(nc).fill(0);
   for(var b=0;b<numBlocks;b++){
     var n1=schedule[b][0],n2=schedule[b][1];

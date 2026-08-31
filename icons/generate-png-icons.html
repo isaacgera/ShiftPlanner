@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ShiftPlanner — PNG Icon Generator</title>
+<style>
+  body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#faf8f4;color:#1e293b;line-height:1.5;max-width:720px;margin:0 auto;padding:1.5rem}
+  h1{color:#6366f1;font-size:1.3rem}
+  p{color:#475569}
+  .row{display:flex;flex-wrap:wrap;gap:1.5rem;margin:1.2rem 0}
+  .card{border:1px solid #e5e0d0;border-radius:10px;padding:1rem;background:#fff;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+  .card canvas{border:1px solid #eee;image-rendering:auto;max-width:180px;height:auto}
+  .card h3{font-size:.9rem;margin:.5rem 0 .2rem}
+  .card small{color:#64748b}
+  button{margin-top:.6rem;padding:.5rem .9rem;border:1px solid #6366f1;border-radius:6px;background:#6366f1;color:#fff;cursor:pointer;font-size:.85rem}
+  button:hover{opacity:.9}
+  .note{background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:.8rem 1rem;font-size:.9rem}
+  code{background:#f1f5f9;padding:.1rem .35rem;border-radius:4px;font-size:.85em}
+</style>
+</head>
+<body>
+<h1>ShiftPlanner PNG Icon Generator</h1>
+<p>Generates PNG app icons that match the existing SVG design. Chrome needs PNG icons to show the "Install app" banner. Click each <strong>Download</strong> button and save the file into this <code>icons/</code> folder with the exact filename shown.</p>
+
+<div class="note">
+  Files to produce (save into <code>icons/</code>):
+  <ul>
+    <li><code>icon-192.png</code> — 192×192, standard</li>
+    <li><code>icon-512.png</code> — 512×512, standard</li>
+    <li><code>icon-maskable-512.png</code> — 512×512, maskable (full-bleed background, safe-zone padding)</li>
+  </ul>
+</div>
+
+<div class="row" id="cards"></div>
+
+<script>
+// Draw the ShiftPlanner icon on a canvas.
+// maskable=true → no rounded corners + content pulled into the ~80% safe zone.
+function drawIcon(ctx, size, maskable){
+  var s = size;
+  ctx.clearRect(0,0,s,s);
+
+  // Background
+  ctx.fillStyle = '#6366f1';
+  if(maskable){
+    // Maskable: full-bleed square (the platform applies its own mask/rounding)
+    ctx.fillRect(0,0,s,s);
+  } else {
+    // Rounded square, radius scaled from the 512 design (rx=64 → 12.5%)
+    var r = s * 0.125;
+    roundRect(ctx, 0, 0, s, s, r);
+    ctx.fill();
+  }
+
+  // For maskable, keep content within ~80% safe zone by scaling text down a touch
+  var scale = maskable ? 0.82 : 1;
+
+  // "SP" main mark — design uses font-size 192 at 512px canvas, baseline y=280
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.font = '700 ' + (192/512*s*scale) + 'px system-ui, -apple-system, "Segoe UI", sans-serif';
+  ctx.fillText('SP', s/2, (280/512*s));
+
+  // "ShiftPlanner" label — design uses font-size 56 at 512px, baseline y=390, colour #c7d2fe
+  ctx.fillStyle = '#c7d2fe';
+  ctx.font = '400 ' + (56/512*s*scale) + 'px system-ui, -apple-system, "Segoe UI", sans-serif';
+  ctx.fillText('ShiftPlanner', s/2, (390/512*s));
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+var specs = [
+  { size:192, maskable:false, file:'icon-192.png', label:'Standard 192' },
+  { size:512, maskable:false, file:'icon-512.png', label:'Standard 512' },
+  { size:512, maskable:true,  file:'icon-maskable-512.png', label:'Maskable 512' }
+];
+
+var container = document.getElementById('cards');
+specs.forEach(function(spec){
+  var card = document.createElement('div');
+  card.className = 'card';
+
+  var canvas = document.createElement('canvas');
+  canvas.width = spec.size;
+  canvas.height = spec.size;
+  var ctx = canvas.getContext('2d');
+  drawIcon(ctx, spec.size, spec.maskable);
+
+  var h3 = document.createElement('h3');
+  h3.textContent = spec.label;
+  var small = document.createElement('small');
+  small.textContent = spec.file;
+
+  var btn = document.createElement('button');
+  btn.textContent = 'Download ' + spec.file;
+  btn.onclick = function(){
+    canvas.toBlob(function(blob){
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = spec.file;
+      a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+    }, 'image/png');
+  };
+
+  card.appendChild(canvas);
+  card.appendChild(h3);
+  card.appendChild(small);
+  card.appendChild(document.createElement('br'));
+  card.appendChild(btn);
+  container.appendChild(card);
+});
+</script>
+</body>
+</html>
