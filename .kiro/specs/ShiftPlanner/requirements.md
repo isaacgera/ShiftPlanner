@@ -189,6 +189,25 @@ If no one is off (all 7 working): extra nurse assigned to M or A (making it 3M+2
 - "Generate" on first use, "Re-generate" after (changes button text/colour)
 - Re-generate preserves all manually edited cells
 - Empty state shows "No staff configured" with button to Staff Setup
+- Empty (staff present, no rota) state prompts to click **Generate** or **Manual**
+
+### Manual mode (v4.1)
+- **Manual** button (beside Generate) builds a blank, hand-editable rota for both tabs
+- Confirms before clearing an existing rota (destructive)
+- Cells are **spreadsheet-style** `contenteditable` — type the shift code directly (no popup/dropdown)
+  - Accepts only valid codes (M, G, A, N, O, PL, MA, AN), **case-insensitive**; invalid entries
+    flash red and revert; empty cells allowed
+  - **G-shift row** is auto-prefilled but editable in Manual mode (fixed in auto mode)
+  - Keyboard nav: Enter/Tab commit + advance (Shift = reverse); arrow keys move between cells
+    (←/→ across days, ↑/↓ across staff); Escape reverts; focus stays put at grid edges
+  - Validation warnings (coverage / incompatible pairs) are **non-blocking** (toast only)
+- Shift Count table and day-header coverage/asterisk update **live** as cells are entered
+- **Total** column = live sum of G+M+MA+A+AN+N+O+PL (equals days-in-month when a row is complete)
+
+### Month/year picker (v4.1)
+- Quick list = current month + next 6 months only; defaults to current month
+- Last dropdown entry **"Custom date…"** opens a month/year dialog for any past/future month
+- A custom selection appears in the dropdown tagged "(custom)"
 
 ### Export
 - **PDF:** via browser print, A4 Landscape, 0.8cm margins

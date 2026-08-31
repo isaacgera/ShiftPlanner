@@ -427,3 +427,87 @@
 - `app.js` — `APP_VERSION` constant, `renderVersion()` at init, `window.SP.version`
 - `ShiftPlanner.html` — `#app-version` span in header + `.app-version` CSS
 - `Ideas.md` (backlog) — status → In Progress (v4.0.1)
+
+---
+
+## Session 7 — Aug 30, 2026
+**v4.1.0 — Manual Rota Mode + Live Summary/Coverage + Picker & Nav (prototype-first, then ported)**
+**AI Partner:** Forjé
+
+### Workflow
+Adopted the new **prototype-first** standing rule for this feature set. Built and iterated in
+`prototypes/ShiftPlanner-prototype.html` + `app-proto.js` + `rules-proto.js` (sandbox with
+`spproto_`-namespaced localStorage so it could never touch live data), across three review
+rounds with Isaac, then ported the finalized behaviour into the live app in one pass.
+
+### What Was Built (v4.1.0)
+
+#### Manual rota mode (new)
+- New **Manual** button (teal) beside Generate/Re-generate, for both Nurses and HouseKeeping.
+- Builds a blank, hand-editable grid. **Confirms before clearing** an existing rota.
+- Cells are **spreadsheet-style contenteditable** — type the shift code directly, no dropdown/popup.
+  - Accepts only valid codes (M, G, A, N, O, PL, MA, AN), **case-insensitive**; invalid entries
+    flash red, revert, and toast a message. Empty cells allowed.
+  - **G-shift row** is auto-prefilled (G weekdays / O Sundays) as a starting point but is
+    **editable** in Manual mode (overridable by hand). In auto mode it stays fixed as before.
+  - Keyboard navigation: **Enter / Tab** commit + advance (Shift = reverse); **arrow keys**
+    move between cells (←/→ same person across days, ↑/↓ same day across people); **Escape**
+    reverts. At a grid edge, focus stays put (no dead state). Manual entry keeps working on return.
+  - Non-blocking validation warnings (coverage / incompatible pairs) surface as toasts.
+
+#### Live summary & coverage (items 3 & 4)
+- New `refreshSummaryAndCoverage()` updates the Shift Count table and the day-header coverage
+  colour + fully-staffed asterisk **in place** (no full re-render), so the cursor isn't disrupted
+  during manual entry. Called after each committed manual cell — counts/coverage update live.
+- **Total column** is now the **live sum** of G+M+MA+A+AN+N+O+PL per staff (was hardcoded to
+  days-in-month). Equals days-in-month when a row is fully filled — doubles as a completeness check.
+  Applies in both auto and manual modes.
+
+#### Highlight persistence during edit (bug fix)
+- The Shift Count highlight now **survives editing** a main-table cell: `render()` re-applies the
+  active highlight after rebuilds, and the outside-click handler no longer clears the highlight when
+  the click is inside the rota table or the inline shift-picker popup.
+
+#### Month/year picker rework
+- Default list = **current month + next 6** only (past months dropped from the quick list),
+  defaulting to the current month.
+- **Custom date…** is the last dropdown entry — opens a month/year dialog (year range now±5) to
+  jump to any past/future month. A custom pick shows in the dropdown tagged "(custom)".
+
+#### Smaller items
+- Empty-state message updated: "…click **Generate** to create a balanced schedule, or click
+  **Manual** to create a schedule manually."
+- HouseKeeping default night preferences seeded to P1/P2/P3 for the three staff (fresh installs only).
+
+### Release chores
+- `APP_VERSION` bumped **4.0.1 → 4.1.0** (minor: new feature).
+- SW `CACHE_NAME` bumped **shiftplanner-v5 → v6** so existing PWA users pull the update.
+- Ideas backlog row → **In Progress (v4.1.0)** (kept In Progress — more changes planned).
+
+### Verification
+- IDE diagnostics clean on `app.js`, `ShiftPlanner.html`, `sw.js`.
+- Storage keys confirmed to resolve to the original `sp_*` names (via `PK='sp_'`), so existing
+  users' saved staff/rotas load seamlessly — no data migration needed.
+- **Not browser-tested here** (Windows shell can't run a live server). Isaac tested each round in
+  the prototype via Live Server; the live app should be re-checked the same way before/after deploy.
+
+### Manual check before deploy
+- Load `ShiftPlanner.html` via Live Server. Confirm: Manual mode entry + nav on both tabs, live
+  Shift Count + coverage updates, Total = live sum, highlight persists during edit, month dropdown
+  shows current + next 6 with a working "Custom date…" entry.
+
+### Deploy status
+- **Committed locally, held for Isaac's review — not pushed yet.** On approval:
+  `git push origin main` (SW already at v6; GitHub Pages serves within 1–2 min).
+
+### Prototype
+- Kept under `prototypes/` for future iteration. It remains the sandbox for the next round
+  (e.g. the mooted nurses-generation-algorithm rework).
+
+### Files Modified
+- `app.js` — full v4.1 logic (ported from `app-proto.js`, re-namespaced to `sp_`, version 4.1.0)
+- `ShiftPlanner.html` — Manual button, manual-hint bar, manual-mode/editing/invalid-flash CSS
+- `sw.js` — `CACHE_NAME` v5 → v6
+- `UserGuide.html` — added "Building a Rota Manually" section (keyboard nav, live counts), updated Total-column and month-picker (Custom date) descriptions, workflow steps
+- `.kiro/specs/ShiftPlanner/*` — requirements/design/tasks updated
+- `Ideas.md` (backlog) — row → In Progress (v4.1.0)

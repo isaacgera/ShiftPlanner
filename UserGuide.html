@@ -69,7 +69,7 @@ kbd{background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:.8rem;font-fa
 <h2>2. Layout Overview</h2>
 
 <div class="card">
-<p><b>Header Row 1:</b> App title + Organisation name | Month title (centered) | Month picker + Generate + Save + Undo</p>
+<p><b>Header Row 1:</b> App title + Organisation name | Month title (centered) | Month picker + Generate + Manual + Save + Undo</p>
 <p><b>Header Row 2:</b> Tabs (Nurses / HouseKeeping) | Shift legend (centered) | Staff Setup + Export PDF</p>
 <p><b>Main Area:</b> Rota table (names × days) + Shift Count summary table</p>
 </div>
@@ -110,6 +110,24 @@ kbd{background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:.8rem;font-fa
 <li>Expected per 31-day month: ~10-11 N, ~6-7 M, ~6-7 A, ~4 MA, 4 O</li>
 <li>Expected per 30-day month: 10 N, 6 M, 6 A, 4 MA, 4 O</li>
 </ul>
+
+<h3>Building a Rota Manually</h3>
+<p>If you'd rather build the whole month by hand instead of auto-generating, click <b>Manual</b> (next to Generate). This works on both the Nurses and HouseKeeping tabs.</p>
+<ol>
+<li>Click <b>Manual</b>. If a rota already exists for that month, you'll be asked to confirm before it's cleared.</li>
+<li>The table loads blank (like a spreadsheet). The G-shift row is pre-filled but you can still change it.</li>
+<li>Click any cell and simply <b>type the shift code</b> — <kbd>M</kbd>, <kbd>G</kbd>, <kbd>A</kbd>, <kbd>N</kbd>, <kbd>O</kbd>, <kbd>PL</kbd>, <kbd>MA</kbd>, or <kbd>AN</kbd>. Lower case is fine.</li>
+<li>Move around with the keyboard:
+  <ul>
+    <li><kbd>Enter</kbd> or <kbd>Tab</kbd> — confirm and move to the next cell (<kbd>Shift</kbd>+<kbd>Tab</kbd>/<kbd>Enter</kbd> goes back)</li>
+    <li><kbd>←</kbd> <kbd>→</kbd> — move along the same person's row (day to day)</li>
+    <li><kbd>↑</kbd> <kbd>↓</kbd> — move to the same day for the person above/below</li>
+    <li><kbd>Esc</kbd> — cancel the current cell edit</li>
+  </ul>
+</li>
+</ol>
+<div class="tip">As you type, the Shift Count table and the day coverage indicators update <b>live</b>. The <b>Total</b> column shows the running sum of all shifts entered for each person — when a row is complete it equals the number of days in the month, so it doubles as a quick "did I miss a cell?" check.</div>
+<div class="warn">Invalid entries (anything that isn't a valid shift code) flash red and are rejected. Coverage or incompatible-pair issues show a brief note but don't block you — Manual mode trusts your judgement.</div>
 
 <h3>Night Shift Preference</h3>
 <p>In Staff Setup, each nurse/HK staff can set preferred weeks for Night shift:</p>
@@ -175,7 +193,7 @@ kbd{background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:.8rem;font-fa
 <tr><td>N</td><td>Night shift days (excludes AN)</td></tr>
 <tr><td>O</td><td>Off days</td></tr>
 <tr><td>PL</td><td>Planned Leave days</td></tr>
-<tr><td>Total</td><td>Days in month</td></tr>
+<tr><td>Total</td><td>Live sum of all shifts entered (G+M+MA+A+AN+N+O+PL). Equals the days in the month when the row is complete.</td></tr>
 </table>
 
 <h3>Interactive Highlighting</h3>
@@ -206,8 +224,8 @@ kbd{background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:.8rem;font-fa
 
 <p>Recommended monthly process:</p>
 <ol>
-<li>Select the upcoming month from the month picker.</li>
-<li>Click <b>Generate</b> to create the rota.</li>
+<li>Select the upcoming month from the month picker (or <b>Custom date…</b> for any other month).</li>
+<li>Click <b>Generate</b> for an auto-balanced rota, or <b>Manual</b> to build it by hand.</li>
 <li>Review the rota visually — check N-blocks, offs spacing, coverage.</li>
 <li>Make manual adjustments if needed (click cells to edit).</li>
 <li>Click <b>Export PDF</b> to save/print.</li>
@@ -218,7 +236,7 @@ kbd{background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:.8rem;font-fa
 <h2>10. Tips and Notes</h2>
 
 <ul>
-<li>Generate rotas up to 5 months in advance using the month picker.</li>
+<li>The month picker lists the current month plus the next 6. For any other month (past or future), choose <b>Custom date…</b> at the bottom of the list and pick the month and year.</li>
 <li>The algorithm rotates positions each month — no nurse always gets the same pattern.</li>
 <li>PL (Planned Leave) is manual-only. Click a cell and select PL. It's preserved on Re-generate.</li>
 <li>The app works entirely in the browser — no data is sent to any server.</li>

@@ -1,13 +1,15 @@
-﻿// ShiftPlanner - App Logic
+﻿// ShiftPlanner - App Logic — PROTOTYPE (v4.1 work)
+// This is a sandbox copy. All localStorage keys are namespaced with the PROTO prefix
+// so it cannot read or overwrite the live app's data.
 (function(){'use strict';
 
 // Single source of truth for the app version (semantic: major.minor.patch).
 // This is the app version — distinct from the service-worker CACHE_NAME, which is
 // just a cache-busting tag. Bump this on every release and note it in the changelog.
-var APP_VERSION='4.1.0';
+var APP_VERSION='4.1.0-proto';
 
-// localStorage key prefix for all app data.
-var PK='sp_';
+// PROTOTYPE storage namespace — keeps sandbox data separate from the live app.
+var PK='spproto_';
 
 var SHIFT_LABELS={M:'8AM-2PM',G:'10AM-6PM',A:'2PM-8PM',N:'8PM-8AM',O:'Day Off',PL:'Leave',MA:'M+A',AN:'A+N'};
 var DAY_NAMES=['S','M','T','W','T','F','S'];

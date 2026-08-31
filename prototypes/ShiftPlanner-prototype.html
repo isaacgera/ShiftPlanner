@@ -1,22 +1,17 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta name="description" content="Shift Rota Generator for Healthcare Institutions">
+<meta name="description" content="Shift Rota Generator — PROTOTYPE (v4.1 work)">
 <meta name="theme-color" content="#6366f1">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ShiftPlanner">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>ShiftPlanner</title>
+<title>ShiftPlanner — PROTOTYPE</title>
 <style>
 :root{--primary:#6366f1;--accent:#8B6914;--bg:#faf8f4;--surface:#fff;--text:#1e293b;--text-light:#64748b;--border:#e5e0d0;--radius:10px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
 .app{max-width:1400px;margin:0 auto;padding:1rem}
+.proto-banner{background:repeating-linear-gradient(45deg,#fde68a,#fde68a 12px,#fcd34d 12px,#fcd34d 24px);color:#78350f;font-weight:700;font-size:.8rem;text-align:center;padding:.35rem;border-radius:6px;margin-bottom:.6rem;border:1px solid #f59e0b}
 header{display:flex;flex-wrap:wrap;margin-bottom:.8rem;padding:.5rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.04)}
 header h1{font-size:1.4rem;color:var(--primary)}
 header h1 span{font-size:.8rem;color:var(--text-light);font-weight:400;display:block}
@@ -31,16 +26,6 @@ header h1 span.app-version{display:inline;font-size:.6rem;color:var(--text-light
 .btn-manual{background:#0d9488;color:#fff;border-color:#0d9488}
 .btn-manual:hover{opacity:.9}
 select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;font-size:.85rem;background:var(--surface)}
-/* Manual (spreadsheet) editable cells */
-.rota-table.manual-mode td.shift-cell{cursor:text}
-.rota-table.manual-mode td.shift-cell:hover{transform:none;box-shadow:inset 0 0 0 2px var(--primary)}
-.rota-table td.shift-cell[contenteditable="true"]{outline:none}
-.rota-table td.shift-cell.editing{box-shadow:inset 0 0 0 2px var(--primary);background:#eef2ff!important;color:#1e293b!important}
-.rota-table td.shift-cell.invalid-flash{animation:invalidFlash .4s ease}
-@keyframes invalidFlash{0%,100%{box-shadow:inset 0 0 0 2px var(--primary)}50%{box-shadow:inset 0 0 0 2px #dc2626;background:#fee2e2!important}}
-/* Manual mode hint bar */
-.manual-hint{display:none;background:#ccfbf1;border:1px solid #5eead4;color:#115e59;font-size:.78rem;padding:.4rem .8rem;border-radius:6px;margin-bottom:.8rem}
-.manual-hint.show{display:block}
 
 /* Rota Grid */
 .rota-container{overflow-x:auto;margin-bottom:1.2rem;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.04)}
@@ -58,6 +43,14 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
 .corner-label-name{position:absolute;bottom:2px;left:5px;font-size:.65rem;color:var(--text-light);font-weight:600}
 .rota-table td.shift-cell{cursor:pointer;font-weight:600;font-size:.78rem;transition:all .15s}
 .rota-table td.shift-cell:hover{transform:scale(1.08);box-shadow:0 2px 5px rgba(0,0,0,.12)}
+
+/* Manual (spreadsheet) editable cells */
+.rota-table.manual-mode td.shift-cell{cursor:text}
+.rota-table.manual-mode td.shift-cell:hover{transform:none;box-shadow:inset 0 0 0 2px var(--primary)}
+.rota-table td.shift-cell[contenteditable="true"]{outline:none}
+.rota-table td.shift-cell.editing{box-shadow:inset 0 0 0 2px var(--primary);background:#eef2ff!important;color:#1e293b!important}
+.rota-table td.shift-cell.invalid-flash{animation:invalidFlash .4s ease}
+@keyframes invalidFlash{0%,100%{box-shadow:inset 0 0 0 2px var(--primary)}50%{box-shadow:inset 0 0 0 2px #dc2626;background:#fee2e2!important}}
 
 /* Shift cell colors */
 .shift-M{background:#dbeafe;color:#1e40af}
@@ -104,13 +97,6 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
 .rota-table.has-highlight tr.hl-partial{opacity:1}
 .rota-table.has-highlight tr.hl-partial td:not(.hl-cell):not(.name-cell){opacity:0.25}
 
-/* Coverage */
-.coverage-row{display:flex;gap:.3rem;margin-bottom:1rem;flex-wrap:wrap;font-size:.8rem}
-.coverage-day{padding:.2rem .4rem;border-radius:4px;border:1px solid var(--border);font-weight:600}
-.coverage-day.ok{background:#dcfce7;border-color:#86efac;color:#166534}
-.coverage-day.warn{background:#fef3c7;border-color:#fcd34d;color:#92400e}
-.coverage-day.danger{background:#fee2e2;border-color:#fca5a5;color:#dc2626}
-
 /* Legend */
 .legend{display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:1rem;font-size:.85rem;padding:.5rem .8rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
 .legend-item{display:flex;align-items:center;gap:.3rem}
@@ -126,63 +112,20 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
 .modal-overlay.show{display:flex}
 .modal{background:var(--surface);border-radius:var(--radius);padding:1.5rem;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
 .modal h3{margin-bottom:1rem;color:var(--primary)}
-.shift-btn-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin:1rem 0}
-.shift-btn{padding:.6rem .3rem;border:2px solid var(--border);border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;text-align:center;background:var(--surface);transition:all .15s}
-.shift-btn:hover{border-color:var(--primary);transform:scale(1.05)}
-.shift-btn.selected{border-color:var(--primary);background:#eef2ff}
 
 /* Alert */
 .alert-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2000;align-items:center;justify-content:center}
 .alert-overlay.show{display:flex}
 .alert-box{background:var(--surface);border-radius:var(--radius);padding:1.5rem;max-width:420px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,.25);border-top:4px solid #f59e0b}
 
-/* Print title - hidden on screen, shown only when printing */
-.print-title{display:none}
-
-/* Print */
-@media print{
-  .no-print{display:none!important}
-  .coverage-row{display:none!important}
-  /* Outer border around entire page content */
-  .app{padding:8px;max-width:100%;border:3px solid #000}
-  /* Header: show but clean up for print */
-  header{box-shadow:none;border:none;margin-bottom:6px;padding:.3rem .5rem}
-  header h1{font-size:12pt}
-  header h1 span{font-size:9pt}
-  #rota-month-title{font-size:11pt!important;text-align:center!important;flex:1!important;margin:0!important}
-  /* Tabs: hide the inactive one, style the active as a label */
-  .tabs .tab{display:none!important}
-  .tabs .tab.active{display:inline-block!important;background:none!important;border:none!important;color:#1e293b!important;font-weight:700;font-size:10pt;padding:0;cursor:default}
-  /* Legend: show inline, smaller */
-  .legend{font-size:8pt!important}
-  .legend-item{gap:2px}
-  .legend-swatch{width:16px;height:14px;font-size:7pt}
-  /* Rota table - uniform 1.5px borders */
-  .rota-table{font-size:9pt;min-width:unset;width:100%;border-collapse:collapse;border:1.5px solid #000}
-  .rota-table th,.rota-table td{padding:2px 3px;border:1.5px solid #000;position:static!important}
-  .rota-table th{background:#eee!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .rota-table th.day-header{font-size:8pt;border:1.5px solid #000}
-  .rota-table th.corner-cell{border:1.5px solid #000;position:static!important}
-  .rota-table td.name-cell{position:static!important;border:1.5px solid #000}
-  .rota-table td.shift-cell{-webkit-print-color-adjust:exact;print-color-adjust:exact;border:1.5px solid #000}
-  .rota-table td.shift-cell:hover{transform:none;box-shadow:none}
-  .rota-container{border:none;box-shadow:none;border-radius:0;overflow:visible;margin-bottom:8px}
-  /* Summary table - uniform 1.5px borders */
-  .summary-table{font-size:9pt;margin-bottom:0;border:1.5px solid #000}
-  .summary-table th,.summary-table td{padding:2px 4px;border:1.5px solid #000}
-  .summary-table th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  /* General */
-  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  @page{size:A4 landscape;margin:0.8cm}
-}
-@media(max-width:768px){
-  .app{padding:.5rem}
-  header{flex-direction:column;align-items:flex-start}
-}
+/* Manual mode hint bar */
+.manual-hint{display:none;background:#ccfbf1;border:1px solid #5eead4;color:#115e59;font-size:.78rem;padding:.4rem .8rem;border-radius:6px;margin-bottom:.8rem}
+.manual-hint.show{display:block}
 </style>
 </head>
 <body>
 <div class="app">
+  <div class="proto-banner">PROTOTYPE — isolated data (spproto_ keys). Changes here do NOT affect the live app. v4.1 feature testing.</div>
   <header>
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;width:100%">
       <h1>ShiftPlanner <span id="app-version" class="app-version" title="App version"></span> <span id="org-name" onclick="SP.editOrgName()" title="Click to change organisation name" style="cursor:pointer"></span></h1>
@@ -217,7 +160,7 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
     </div>
   </header>
 
-  <div class="manual-hint no-print" id="manual-hint">Manual mode: click a cell and type a shift code (M, G, A, N, O, PL, MA, AN). Press Enter, Tab or the arrow keys to move. Invalid entries are rejected.</div>
+  <div class="manual-hint" id="manual-hint">Manual mode: click a cell and type a shift code (M, G, A, N, O, PL, MA, AN). Press Enter or Tab to confirm. Invalid entries are rejected. The G-shift row is auto-filled.</div>
 
   <div id="rota-content"></div>
 
@@ -225,10 +168,7 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
   <div class="alert-overlay" id="alert-overlay"><div class="alert-box" id="alert-box"></div></div>
 </div>
 
-<script src="rules.js"></script>
-<script src="app.js"></script>
-<script>
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(function(e){console.warn('SW registration failed:',e)})}
-</script>
+<script src="rules-proto.js"></script>
+<script src="app-proto.js"></script>
 </body>
 </html>

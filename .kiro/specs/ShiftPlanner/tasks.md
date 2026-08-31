@@ -40,7 +40,7 @@
 - [ ] **Print layout fine-tuning:** Test PDF output on different printers/paper sizes; adjust margins if content overflows.
 - [ ] **Mobile responsiveness:** Improve table scrolling and touch targets for phone-sized screens.
 - [ ] **Dark mode:** Add optional dark theme (respect `prefers-color-scheme`).
-- [ ] **Keyboard navigation:** Allow arrow-key movement through rota cells and Enter to edit.
+- [x] **Keyboard navigation:** Arrow-key + Tab/Enter movement through rota cells (Manual mode, v4.1). Auto-mode cells still use the click-to-edit popup.
 - [ ] **Tooltips on hover:** Show shift time (e.g., "8AM–2PM") when hovering over a cell.
 
 ---
@@ -65,6 +65,10 @@
 
 ## Completed (Reference)
 
+- [x] **v4.1.0 — Manual rota mode** (spreadsheet-style entry, valid codes, editable G-row, keyboard nav, confirm-before-clear; both tabs) (Session 7)
+- [x] **v4.1.0 — Live Shift Count + coverage/asterisk updates during manual entry**; Total column = live sum (Session 7)
+- [x] **v4.1.0 — Highlight persists during cell edit** (Session 7)
+- [x] **v4.1.0 — Month picker rework**: current + next 6 months, "Custom date…" dialog for any month (Session 7)
 - [x] Nurses algorithm — pre-planned N-block schedule (Session 5)
 - [x] HouseKeeping tab — 3-staff rotation with balanced MA (Session 4–5)
 - [x] PWA setup — manifest, service worker, SVG icons (Session 5)

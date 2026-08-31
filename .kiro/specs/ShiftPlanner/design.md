@@ -176,7 +176,7 @@ state change → render() → buildRotaTable() + buildSummaryTable()
                         → updateButtons()
 ```
 
-### Event Flow (Shift Edit)
+### Event Flow (Shift Edit — auto mode)
 ```
 click cell → editShift(name, dayIdx)
           → show inline popup at cell position
@@ -184,6 +184,37 @@ click cell → editShift(name, dayIdx)
                         → validate() → show warnings if any
                         → pushUndo() → save to localStorage → render()
 ```
+
+### Manual Mode (v4.1)
+```
+Manual button → manualRota()
+  → (confirm if a rota exists) → buildBlankRota() [G-shift auto-prefilled]
+  → save + clear edits → manualMode=true → render()
+render() [manualMode] → wireManualCells()
+  → each shift cell: contenteditable, no onclick; G-row included; navigation handlers
+Event flow (per cell):
+  focus → select text
+  type + Enter/Tab/Arrow/blur → commitManualCell(name, dayIdx, cell)
+    → normalise (uppercase; '-' → blank) → validate code
+        · empty → clear cell
+        · invalid → flash red + revert + toast
+        · valid → pushUndo + save + markEdit + paintCell
+    → refreshSummaryAndCoverage()   // live counts + coverage, no full re-render
+    → non-blocking validate() warning toast
+  Enter/Tab/Arrows → focusManualCell(neighbour) via manualNeighbour(); edge = stay put
+```
+
+`refreshSummaryAndCoverage()` patches the day-header backgrounds + fully-staffed asterisk and the
+Shift Count cells (including the **Total = live sum** column) in place, so the cursor is preserved
+during entry. It is the mechanism behind live summary/coverage updates.
+
+**Highlight persistence (v4.1 fix):** `render()` re-applies the active highlight after rebuilding,
+and the document-level outside-click handler skips clearing when the click is inside `.rota-table`
+or `#inline-popup` — so a Shift Count selection survives editing a cell.
+
+**Month picker (v4.1):** `buildMonthSelect()` lists current + next 6 months and appends a
+`__custom__` option; `changeMonth('__custom__')` opens `showCustomDate()` (month/year dialog →
+`applyCustomDate()`). Out-of-list selections are shown tagged "(custom)".
 
 ### Highlight System
 ```javascript
