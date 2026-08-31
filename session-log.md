@@ -415,3 +415,15 @@
 - `manifest.json` — PNG icons added (SVG kept as fallback)
 - `sw.js` — `CACHE_NAME` v4→v5, PNGs added to precache
 - `icons/generate-png-icons.html` — **new** browser-based PNG generator
+
+### Addendum — App Version Constant + Backlog Sync
+- **Introduced a single app version constant.** Added `APP_VERSION = '4.0.1'` at the top of `app.js` as the single source of truth for the app's semantic version. Previously the app had no version constant and was leaning on the SW `CACHE_NAME` (`shiftplanner-vN`) as a proxy — but that's a cache-busting tag, not an app version. They're now explicitly decoupled (comment in `app.js` notes this).
+  - Surfaced as a small superscript `v4.0.1` next to the app title in the header (`#app-version` span, `.app-version` CSS — muted, unobtrusive). Also appears on printed PDF (inside `<h1>`), which is acceptable/nice.
+  - Also exposed as `window.SP.version` for convenience.
+- **Versioning going forward:** the previous shipped state was effectively v4.0. This cleanup pass is patch-level (no feature/behaviour change) → **v4.0.1**. Bump `APP_VERSION` on each release and keep it in step with a changelog; bump the SW `CACHE_NAME` separately when cached assets change.
+- **Ideas backlog synced.** `Ideas.md` ShiftPlanner row moved `Built (v4.0)` → `In Progress (v4.0.1)` (should have flipped to In Progress at the start of the session — corrected). Set back to `Built (v4.0.1)` once this deploys and is verified.
+
+### Files Modified (addendum)
+- `app.js` — `APP_VERSION` constant, `renderVersion()` at init, `window.SP.version`
+- `ShiftPlanner.html` — `#app-version` span in header + `.app-version` CSS
+- `Ideas.md` (backlog) — status → In Progress (v4.0.1)

@@ -20,6 +20,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 header{display:flex;flex-wrap:wrap;margin-bottom:.8rem;padding:.5rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.04)}
 header h1{font-size:1.4rem;color:var(--primary)}
 header h1 span{font-size:.8rem;color:var(--text-light);font-weight:400;display:block}
+header h1 span.app-version{display:inline;font-size:.6rem;color:var(--text-light);font-weight:500;vertical-align:super;opacity:.7}
 .controls{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
 .btn{padding:.45rem .9rem;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;font-size:.85rem;transition:all .2s}
 .btn:hover{border-color:var(--primary);color:var(--primary)}
@@ -172,7 +173,7 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
 <div class="app">
   <header>
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;width:100%">
-      <h1>ShiftPlanner <span id="org-name" onclick="SP.editOrgName()" title="Click to change organisation name" style="cursor:pointer"></span></h1>
+      <h1>ShiftPlanner <span id="app-version" class="app-version" title="App version"></span> <span id="org-name" onclick="SP.editOrgName()" title="Click to change organisation name" style="cursor:pointer"></span></h1>
       <h2 id="rota-month-title" style="font-size:1rem;color:var(--accent);margin:0;text-align:center;flex:1"></h2>
       <div class="controls no-print">
         <select id="month-select" onchange="SP.changeMonth(this.value)"></select>

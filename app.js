@@ -1,5 +1,10 @@
-﻿// ShiftPlanner - App Logic v4.0 (Aug 21, 2026)
+﻿// ShiftPlanner - App Logic
 (function(){'use strict';
+
+// Single source of truth for the app version (semantic: major.minor.patch).
+// This is the app version — distinct from the service-worker CACHE_NAME, which is
+// just a cache-busting tag. Bump this on every release and note it in the changelog.
+var APP_VERSION='4.0.1';
 
 var SHIFT_LABELS={M:'8AM-2PM',G:'10AM-6PM',A:'2PM-8PM',N:'8PM-8AM',O:'Day Off',PL:'Leave',MA:'M+A',AN:'A+N'};
 var DAY_NAMES=['S','M','T','W','T','F','S'];
@@ -1091,6 +1096,7 @@ document.getElementById('alert-overlay').addEventListener('click',function(e){if
 var sel=document.getElementById('month-select'),now=new Date();
 for(var i=-6;i<=5;i++){var d=new Date(now.getFullYear(),now.getMonth()+i,1);var o=document.createElement('option');o.value=d.getFullYear()+'-'+d.getMonth();o.textContent=MONTH_NAMES[d.getMonth()]+' '+d.getFullYear();if(i===0)o.selected=true;sel.appendChild(o)}
 renderOrgName();
+(function renderVersion(){var el=document.getElementById('app-version');if(el)el.textContent='v'+APP_VERSION;})();
 render();
 
 // ======= HIGHLIGHT SYSTEM =======
@@ -1346,5 +1352,5 @@ function importStaff(input){
 }
 
 // ======= PUBLIC API =======
-window.SP={changeMonth:changeMonth,switchTab:switchTab,generateRota:generateRota,showAddOff:showAddOff,applyAddOff:applyAddOff,editShift:editShift,applyShift:applyShift,confirmShift:confirmShift,saveManual:saveManual,undoLast:undoLast,showSetup:showSetup,toggleStaff:toggleStaff,changeRole:changeRole,removeStaff:removeStaff,addStaff:addStaff,editName:editName,editOrgName:editOrgName,setNightPref:setNightPref,addPair:addPair,removePair:removePair,closeModal:closeModal,closeAlert:closeAlert,hlName:hlName,hlShift:hlShift,hlAllNames:hlAllNames,hlAllShift:hlAllShift,clearHighlight:clearHighlight,exportPDF:exportPDF,exportStaff:exportStaff,importStaff:importStaff};
+window.SP={version:APP_VERSION,changeMonth:changeMonth,switchTab:switchTab,generateRota:generateRota,showAddOff:showAddOff,applyAddOff:applyAddOff,editShift:editShift,applyShift:applyShift,confirmShift:confirmShift,saveManual:saveManual,undoLast:undoLast,showSetup:showSetup,toggleStaff:toggleStaff,changeRole:changeRole,removeStaff:removeStaff,addStaff:addStaff,editName:editName,editOrgName:editOrgName,setNightPref:setNightPref,addPair:addPair,removePair:removePair,closeModal:closeModal,closeAlert:closeAlert,hlName:hlName,hlShift:hlShift,hlAllNames:hlAllNames,hlAllShift:hlAllShift,clearHighlight:clearHighlight,exportPDF:exportPDF,exportStaff:exportStaff,importStaff:importStaff};
 })();
