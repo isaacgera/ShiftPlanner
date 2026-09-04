@@ -4,7 +4,7 @@
 // Single source of truth for the app version (semantic: major.minor.patch).
 // This is the app version — distinct from the service-worker CACHE_NAME, which is
 // just a cache-busting tag. Bump this on every release and note it in the changelog.
-var APP_VERSION='4.1.0';
+var APP_VERSION='4.1.3';
 
 // localStorage key prefix for all app data.
 var PK='sp_';
@@ -24,8 +24,10 @@ function renderOrgName(){
   var el=document.getElementById('org-name');
   var name=loadOrgName();
   if(el)el.textContent=name||'Click here to set organisation name';
-  if(el&&!name)el.style.opacity='0.5';
-  else if(el)el.style.opacity='1';
+  // Placeholder styling: use an accessible muted colour + italic (not faint opacity,
+  // which failed the WCAG contrast bar) so the "not set yet" state still reads clearly.
+  if(el&&!name){el.style.color='var(--muted)';el.style.fontStyle='italic'}
+  else if(el){el.style.color='';el.style.fontStyle=''}
 }
 function editOrgName(){
   var current=loadOrgName();

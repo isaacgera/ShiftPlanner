@@ -9,11 +9,19 @@ ShiftPlanner/
 ├── app.js               ← All application logic (IIFE, exposes SP namespace)
 ├── sw.js                ← Service worker (cache-first, offline)
 ├── manifest.json        ← PWA manifest
-├── icons/               ← SVG app icons (192, 512, maskable)
+├── icons/               ← PNG app icons (192, 512, maskable-512) + SVG (192, 512, maskable) fallbacks; `generate-png-icons.html` generator
+├── LICENSE              ← MIT (Copyright (c) 2026 Isaac A. Gera)
 ├── UserGuide.html       ← User documentation
 ├── session-log.md       ← Development history
+├── prototypes/          ← Sandbox copies for iterating (e.g. ShiftPlanner-prototype.html); not shipped
 └── ShiftPlanner-Staff.json/csv  ← Staff backup files
 ```
+
+> **File-name casing note:** the on-disk doc files are `UserGuide.html` and `session-log.md` (as
+> listed above), which differ from the wider app-family convention of `userguide.html` /
+> `SESSION-LOG.md`. The names here are the actual shipped filenames — referenced by the SW precache
+> and in-app links — so the tree matches disk deliberately. Left as-is on this deployed app to avoid
+> churning referenced filenames; noted here so the casing reads as known, not an oversight.
 
 ### Design Principles
 - **Single IIFE** — all logic in one `(function(){'use strict'; ... })()` block, exposed via `window.SP`
@@ -86,9 +94,87 @@ Month is 0-indexed (January = 0). Year is full 4-digit year.
 
 ---
 
+## RULES Configuration Schema (`rules.js`)
+
+All generation constraints live in a single `RULES` object in `rules.js`, kept separate from
+`app.js` so a non-developer can tune the rota without touching application logic (a stated design
+goal). The table below catalogues the keys the spec and algorithm reference, with their shipped
+defaults. Nurses config is top-level; HouseKeeping config is namespaced under `RULES.housekeeping`.
+
+### Nurses (top-level `RULES.*`)
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `night.nursesPerDay` | `2` | Nurses on Night every day (hard coverage target) |
+| `night.blockLength` | `5` | Target continuous nights per block (4–5) |
+| `night.maxConsecutive` | `5` | Hard max consecutive nights per nurse |
+| `night.targetPerNurse` | `[8,10]` | Acceptable N spread per nurse/month (algorithm hard-caps writes at 9 — see requirements B1) |
+| `night.recoveryShift` | `'M'` | Shift assigned immediately after a night block |
+| `night.noOffDuringBlock` | `true` | No off day may fall inside a night block |
+| `night.noStandalone` | `true` | N / AN must be part of a 4–5 day block |
+| `morning.minPerDay` / `maxPerDay` | `2` / `3` | Min/max nurses on Morning per day |
+| `morning.blockLength` | `[4,5]` | Continuous mornings per block |
+| `morning.targetPerNurse` | `[8,10]` | Target M per nurse/month (capped at 9 in algorithm) |
+| `morning.offCanBreakBlock` | `true` | An off may interrupt an M block |
+| `afternoon.*` | same as morning | Afternoon mirrors the Morning keys |
+| `combo.maMax` / `anMax` | `3` / `1` | Max MA / AN per nurse/month |
+| `combo.useForCoverageOnly` | `true` | Combos only assigned to fill coverage gaps |
+| `combo.preferMA` | `true` | Prefer MA over AN when filling gaps |
+| `gShift.fixedNurse` | `'JAYA'` | Nurse permanently on G-shift |
+| `gShift.offDay` | `0` | Day index the G-shift nurse is off (0 = Sunday) |
+| `dayOff.targetPerNurse` | `[4,4]` | Exactly 4 offs per nurse/month (hard) |
+| `dayOff.maxPerDay` | `1` | Max nurses off on any single day |
+| `dayOff.spacing` | `[5,8]` | Preferred off spacing in days (fallback ≥4 — see requirements) |
+| `dayOff.canBreakMA` | `true` | Off may interrupt M/A blocks (never N) |
+| `plannedLeave.manualOnly` | `true` | PL is never auto-generated |
+| `plannedLeave.countsAsOff` | `true` | PL counts toward off/coverage limits (additive to the 4 auto-offs) |
+| `plannedLeave.lockedOnRegenerate` | `true` | PL cells preserved on Re-generate |
+| `incompatiblePairs` | `[[SUVARNA,PUNNAMMA],[VIJAYA,SHAILAJA]]` | Pairs that cannot share the same M/A/N shift on a day (M/A enforced; N conflicts accepted) |
+| `preferredNightPairs` | 5 configured pairs | Best-effort N pairings |
+| `fixedNightWeeks` | `{VIJAYA:[1,3]}` | Hard-guarantee mandatory N weeks (1-indexed) |
+| `general.allDaysMustBeCovered` | `true` | Every day must meet minimum coverage |
+| `general.equalDistribution` | `true` | Aim for ±1–2 variance across nurses |
+| `general.manualEditsLocked` | `true` | Manual edits preserved on Re-generate |
+
+### HouseKeeping (`RULES.housekeeping.*`)
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `gShift.offDay` | `0` | Day the HK G-shift person is off (0 = Sunday) |
+| `shifts.perDay` | `{M:1,A:1,N:1}` | One staff per shift per day |
+| `shifts.blockLength` | `[10,11]` | Nominal block length (31-day month; shorter months scale down — see requirements) |
+| `shifts.rotationOrder` | `['M','A','N']` | Phase rotation M → A → N → M |
+| `shifts.targetPerStaff` | `[9,11]` | Target count of each shift type per staff/month |
+| `dayOff.targetPerStaff` | `4` | Exactly 4 offs per staff/month |
+| `dayOff.maxPerDay` | `1` | Max staff off per day |
+| `dayOff.spacing` | `[5,8]` | Preferred off spacing (fallback ≥4) |
+| `dayOff.allowedFrom` | `['M','A']` | Offs only from M/A days |
+| `dayOff.noOffDuringN` | `true` | No off during a Night block |
+| `coverage.onOff` | `'MA'` | Off-day cover: M-person does MA |
+| `coverage.priority` | `['N','A','M']` | Coverage priority order |
+| `incompatiblePairs` | `[]` | **Empty by design** — HK has no incompatible-pair rule |
+
+> **Note — HouseKeeping rule scope:** `RULES.housekeeping` has **no** `fixedNightWeeks` and **no**
+> `preferredNightPairs` keys, and its `incompatiblePairs` is intentionally empty. Those three rule
+> types are **Nurses-only by design** (see requirements.md HouseKeeping section). HK night handling
+> is limited to best-effort phase swaps for the `nightPref` field on staff records.
+
+> **Supported staff counts:** The Nurses config assumes **7 rotating nurses** (7 N-blocks + `+3`
+> pairing gap in Step 1) and HouseKeeping assumes **3 rotating staff** (3 phases). Other counts are
+> untested — see requirements.md "Supported nurse count".
+
+---
+
 ## Algorithm Design
 
-### Nurses — `generateRotaForMonth()` (7-step pipeline)
+### Nurses — `generateRotaForMonth()` (pipeline)
+
+> **Note on step numbering:** the original design had 8 steps. **Step 6** (a standalone
+> "max 5 consecutive nights" enforcement pass) and the old Step 8 (standalone-N cleanup) were
+> removed in Session 5 because they destroyed valid pre-planned N-blocks — the max-5 cap is now
+> enforced inline during Step 1 post-processing. The remaining step numbers (1–5, 7) are kept as-is
+> so they still match the numbered references in `app.js` and the session log. There is
+> intentionally no Step 6.
 
 #### Step 1: N-Block Assignment (Pre-planned Schedule)
 
@@ -119,10 +205,10 @@ Caps: no nurse exceeds 9M or 9A.
 
 #### Step 3: Off Placement (Exactly 4 per nurse)
 
-For each nurse, collect candidate days (M or A, not locked). Place 4 offs evenly spaced (spacing ≥ 5 days). Constraints:
+For each nurse, collect candidate days (M or A, not locked). Place 4 offs evenly spaced (target window **5–8 days apart**). Constraints:
 - Max 1 nurse off per day (configurable via `RULES.dayOff.maxPerDay`)
 - Never from N days
-- Fallback: relaxed spacing (≥ 4) if ideal spacing can't place all 4
+- Fallback: relaxed spacing (≥ 4 days) if the 5–8 window can't place all 4
 
 #### Step 4: Coverage Check (Swap-first, MA last resort)
 
@@ -244,6 +330,34 @@ var hlState = {
 
 Validation runs on **manual edits only** (not during generation — algorithm enforces rules internally).
 
+### Generation failure modes (design intent)
+
+Because `validate()` only guards manual edits, generation needs its own failure story (see
+requirements.md "Generation failure handling"). Design intent:
+
+- **Graceful degradation:** each generation step aims to satisfy its hard rule; where it cannot
+  (e.g. off-placement can't fit all 4 within any spacing, or coverage can't reach 2M/2A/2N for a
+  given staff count), the step places the best it can and **flags** the shortfall rather than
+  throwing or leaving the rota blank.
+- **Surfaced, not silent:** shortfalls should reach the user as a toast/banner naming the
+  unsatisfied rule. A rendered-but-imperfect rota is preferable to a silent gap.
+- **Error boundary:** `generateRotaForMonth()` should be wrapped in try/catch so an unexpected
+  exception yields a friendly message, not a silent no-op.
+- **Status:** the error boundary and generation warnings are **open tasks** (tasks.md Technical
+  Debt); this section records the intended behaviour so the code has a spec to build to.
+
+### Manual-mode validation (v4.1)
+
+Manual (spreadsheet) mode has its own two-layer validation in `commitManualCell`, separate from
+the inline-popup edit path above:
+
+1. **Code validation (blocking, per cell):** the typed value is normalised (uppercased; `-` → blank)
+   and checked against the valid set (M, G, A, N, O, PL, MA, AN). Empty clears the cell; an invalid
+   code **flashes the cell red, reverts it, and toasts** — it is never committed.
+2. **Rule validation (non-blocking):** once a valid code is committed, `validate()` runs for
+   coverage / incompatible-pair checks and surfaces any warnings as a **toast only** — it does not
+   block the entry. This lets the user build a rota freely and see warnings without being stopped.
+
 ---
 
 ## PWA Design
@@ -257,8 +371,32 @@ Validation runs on **manual edits only** (not during generation — algorithm en
 ### Manifest (`manifest.json`)
 - `display: standalone`
 - Theme: indigo (#6366f1)
-- Icons: SVG (192, 512, maskable)
-- Note: Chrome requires PNG for install banner — SVG works for manifest but limits installability
+- Icons: **PNG (192, 512, maskable-512) listed first, with SVG (192, 512, maskable) kept as scalable fallbacks** (Session 6)
+- Chrome requires PNG for the install banner; the PNGs satisfy that. They are produced by
+  `icons/generate-png-icons.html` (a zero-dependency canvas generator) since no raster tooling
+  is available on this machine — run it and save the 3 PNGs into `icons/` before deploying, as the
+  SW precache is all-or-nothing.
+
+---
+
+## Versioning & Release Ritual
+
+The app carries a single source-of-truth version constant `APP_VERSION` in `app.js` (currently
+`'4.1.0'`), following semantic versioning (major.minor.patch). Because ShiftPlanner is a shipped
+PWA served from GitHub Pages, a version change must be propagated to the offline cache or returning
+users keep the stale cached build. The three move together on every release:
+
+| Artefact | Location | On release |
+|----------|----------|------------|
+| `APP_VERSION` | `app.js` | Bump per semver (patch/minor/major) |
+| `CACHE_NAME` | `sw.js` (`shiftplanner-v<n>`) | Bump the `<n>` so the SW `activate` step purges old caches and re-precaches |
+| Changelog | session-log.md (and in-app "What's New", planned) | Record what changed for the new version |
+
+**Rule of thumb:** never ship an `APP_VERSION` bump without also bumping `CACHE_NAME` — otherwise
+the service worker serves the previous cached assets and the update never reaches installed users.
+Prototype iterations use an in-progress tag (e.g. `4.1.0-proto`) and do **not** bump the shipped
+`APP_VERSION` or `CACHE_NAME` until the finalized work is ported back (see the prototype workflow).
+The in-app "What's New" modal is currently an open task (tasks.md Deployment & Distribution).
 
 ---
 

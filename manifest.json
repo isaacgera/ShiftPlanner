@@ -3,9 +3,12 @@
   "short_name": "ShiftPlanner",
   "description": "Shift Rota Generator for Healthcare Institutions",
   "start_url": "./ShiftPlanner.html",
+  "scope": "./",
+  "lang": "en-GB",
+  "dir": "ltr",
   "display": "standalone",
   "background_color": "#faf8f4",
-  "theme_color": "#6366f1",
+  "theme_color": "#4f46e5",
   "orientation": "any",
   "icons": [
     {
@@ -25,18 +28,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "icons/icon-192.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-512.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
     }
   ]
 }

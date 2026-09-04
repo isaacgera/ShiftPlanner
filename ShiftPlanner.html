@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="description" content="Shift Rota Generator for Healthcare Institutions">
-<meta name="theme-color" content="#6366f1">
+<meta name="theme-color" content="#4f46e5">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ShiftPlanner">
@@ -13,14 +14,14 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>ShiftPlanner</title>
 <style>
-:root{--primary:#6366f1;--accent:#8B6914;--bg:#faf8f4;--surface:#fff;--text:#1e293b;--text-light:#64748b;--border:#e5e0d0;--radius:10px}
+:root{--primary:#4f46e5;--accent:#8B6914;--bg:#faf8f4;--surface:#fff;--text:#1e293b;--text-light:#5b6675;--muted:#6b7685;--border:#e5e0d0;--radius:10px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
 .app{max-width:1400px;margin:0 auto;padding:1rem}
 header{display:flex;flex-wrap:wrap;margin-bottom:.8rem;padding:.5rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.04)}
 header h1{font-size:1.4rem;color:var(--primary)}
 header h1 span{font-size:.8rem;color:var(--text-light);font-weight:400;display:block}
-header h1 span.app-version{display:inline;font-size:.6rem;color:var(--text-light);font-weight:500;vertical-align:super;opacity:.7}
+header h1 span.app-version{display:inline;font-size:.6rem;color:var(--muted);font-weight:600;vertical-align:super}
 .controls{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
 .btn{padding:.45rem .9rem;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;font-size:.85rem;transition:all .2s}
 .btn:hover{border-color:var(--primary);color:var(--primary)}
@@ -28,7 +29,7 @@ header h1 span.app-version{display:inline;font-size:.6rem;color:var(--text-light
 .btn-primary:hover{opacity:.9}
 .btn-warn{background:#d97706;color:#fff;border-color:#d97706}
 .btn-warn:hover{opacity:.9}
-.btn-manual{background:#0d9488;color:#fff;border-color:#0d9488}
+.btn-manual{background:#0f766e;color:#fff;border-color:#0f766e}
 .btn-manual:hover{opacity:.9}
 select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;font-size:.85rem;background:var(--surface)}
 /* Manual (spreadsheet) editable cells */
@@ -186,9 +187,9 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
   <header>
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;width:100%">
       <h1>ShiftPlanner <span id="app-version" class="app-version" title="App version"></span> <span id="org-name" onclick="SP.editOrgName()" title="Click to change organisation name" style="cursor:pointer"></span></h1>
-      <h2 id="rota-month-title" style="font-size:1rem;color:var(--accent);margin:0;text-align:center;flex:1"></h2>
+      <h2 id="rota-month-title" aria-label="Rota month" style="font-size:1rem;color:var(--accent);margin:0;text-align:center;flex:1"></h2>
       <div class="controls no-print">
-        <select id="month-select" onchange="SP.changeMonth(this.value)"></select>
+        <select id="month-select" aria-label="Select month and year for the rota" onchange="SP.changeMonth(this.value)"></select>
         <button class="btn btn-primary" id="btn-generate" onclick="SP.generateRota()">Generate</button>
         <button class="btn btn-manual" id="btn-manual" onclick="SP.manualRota()" title="Start a blank, hand-editable rota">Manual</button>
         <button class="btn btn-warn" onclick="SP.saveManual()" id="btn-save" style="display:none">Save</button>
@@ -219,7 +220,7 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
 
   <div class="manual-hint no-print" id="manual-hint">Manual mode: click a cell and type a shift code (M, G, A, N, O, PL, MA, AN). Press Enter, Tab or the arrow keys to move. Invalid entries are rejected.</div>
 
-  <div id="rota-content"></div>
+  <main id="rota-content"></main>
 
   <div class="modal-overlay" id="modal-overlay"><div class="modal" id="modal-content"></div></div>
   <div class="alert-overlay" id="alert-overlay"><div class="alert-box" id="alert-box"></div></div>

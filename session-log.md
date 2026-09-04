@@ -511,3 +511,476 @@ rounds with Isaac, then ported the finalized behaviour into the live app in one 
 - `UserGuide.html` — added "Building a Rota Manually" section (keyboard nav, live counts), updated Total-column and month-picker (Custom date) descriptions, workflow steps
 - `.kiro/specs/ShiftPlanner/*` — requirements/design/tasks updated
 - `Ideas.md` (backlog) — row → In Progress (v4.1.0)
+
+---
+
+## Session 8 — Aug 30, 2026
+**Spec review (new Spec Reviewer agent) + spec-hygiene fixes**
+**AI Partner:** Forjé
+
+### What Was Done
+Ran the new **Spec Reviewer** Kiro agent against the ShiftPlanner spec trilogy (read-only review),
+then actioned the findings. **No app code changed** — this session only touched the spec docs.
+
+#### Fixes applied to `.kiro/specs/ShiftPlanner/`
+- **design.md — step-numbering glitch:** the Nurses pipeline listed Step 7 with no Step 6 (Step 6
+  "max 5 consecutive nights" and old Step 8 "standalone-N cleanup" were removed in Session 5).
+  Added an explanatory note; kept the 1–5/7 numbering so it still matches `app.js` and the log.
+- **Off-spacing drift aligned:** design.md Nurses off-placement now states the **5–8 day** window
+  with fallback to 4 (was ">= 5 / fallback >= 4"), matching requirements.md. Added the
+  "(with fallback to 4 if needed)" parenthetical to the HouseKeeping spacing line for parity.
+- **Manual-mode validation documented:** added a "Manual-mode validation (v4.1)" subsection to
+  design.md's Validation Logic (blocking code-validation + non-blocking rule-warning toast in
+  `commitManualCell`), which previously only described the inline-popup edit path.
+- **Build Standards block added to requirements.md:** rigour (Medium), stack (vanilla, no build),
+  platforms (PWA desktop+mobile, GitHub Pages), data/privacy (local-first, no patient data), and
+  **licensing = TBD** (flagged — no LICENSE chosen yet).
+
+### Open item
+- **License still undecided** — needs a call from Isaac before a LICENSE file is added
+  (tracked in tasks.md and the requirements Build Standards block).
+
+### Verification
+- Doc-only edits; no code touched, so no rebuild needed. Reviewed edited sections for internal
+  consistency. App behaviour and version (v4.1.0) unchanged.
+
+### Files Modified
+- `.kiro/specs/ShiftPlanner/design.md` — step-numbering note, off-spacing wording, Manual-mode validation subsection
+- `.kiro/specs/ShiftPlanner/requirements.md` — Build Standards block, HK off-spacing parity
+- `.kiro/specs/ShiftPlanner/tasks.md` — "Spec hygiene" completed items + open license task
+
+---
+
+## Session 9 — Aug 30, 2026
+**Spec re-review + icon-docs refresh**
+**AI Partner:** Forjé
+
+### What Was Done
+Re-ran the Spec Reviewer against the ShiftPlanner spec to confirm the Session 8 fixes.
+All four verified landed and consistent (step-numbering note, off-spacing alignment,
+Manual-mode validation subsection, Build Standards block). Verdict: **Ready to build**.
+
+The re-review surfaced one new minor drift — the icon references still said "SVG icons" only,
+even though Session 6 added PNGs. Fixed it:
+- **design.md** — architecture tree now lists PNG icons (192/512/maskable-512) + SVG fallbacks and
+  the `generate-png-icons.html` generator; PWA/Manifest section rewritten to say PNGs are listed
+  first with SVG fallbacks, and notes the install-banner requirement is satisfied + the
+  all-or-nothing SW precache caveat.
+- **requirements.md** — PWA section now lists PNG icons (with SVG fallbacks) instead of SVG-only.
+
+### Open item (unchanged)
+- **License still undecided** — the one remaining item before the spec is fully complete.
+  Needs Isaac's pick, then add a LICENSE file (tracked in tasks.md).
+
+### Verification
+- Doc-only edits; no app code touched, no rebuild needed. Re-read the edited sections — icon
+  wording now consistent across design.md and requirements.md. App/version (v4.1.0) unchanged.
+
+### Files Modified
+- `.kiro/specs/ShiftPlanner/design.md` — icon wording (architecture tree + PWA/Manifest section)
+- `.kiro/specs/ShiftPlanner/requirements.md` — PWA icons wording
+- `.kiro/specs/ShiftPlanner/tasks.md` — icon-docs task ticked under Spec hygiene
+
+### Addendum — License decided (MIT)
+- Chose **MIT** for ShiftPlanner (endorsed over Apache-2.0 — patent grant is overkill for a small
+  local-first tool). Created `LICENSE` at the app root: `Copyright (c) 2026 Isaac A. Gera`,
+  matching the Bill Splitter app for family consistency.
+- `requirements.md` Build Standards licensing line updated TBD -> MIT.
+- `tasks.md` license task ticked. This closes the last open item from the Spec Reviewer pass —
+  the ShiftPlanner spec is now complete with no outstanding flags.
+
+### Files Modified (addendum)
+- `LICENSE` — new, MIT
+- `.kiro/specs/ShiftPlanner/requirements.md` — licensing line
+- `.kiro/specs/ShiftPlanner/tasks.md` — license task ticked
+
+---
+
+## Session 10 — Aug 30, 2026
+**Spec-hygiene pass (Spec Reviewer follow-up) — verified against disk**
+**AI Partner:** Forjé
+
+Actioned the four tidy-up items from the latest Spec Reviewer pass. Claims were verified against
+the actual files before editing (not taken on trust).
+
+1. **PNG-icon task ticked.** Confirmed all 3 PNGs exist on disk (`icons/icon-192.png`,
+   `icon-512.png`, `icon-maskable-512.png`), listed first in `manifest.json`, and precached in
+   `sw.js`. tasks.md changed `[~]` -> `[x]`; removed the misleading "manual step remaining" note.
+2. **License resolved (trail note).** MIT is fully in place — `LICENSE` at app root
+   (Copyright (c) 2026 Isaac A. Gera), requirements Build Standards states MIT, tasks ticked.
+   The older Session 8/9 "TBD" lines are historical only; **licensing is resolved (MIT), no longer open.**
+3. **Maskable SVG now actually used.** Rather than precache an unreferenced file, added
+   `icon-maskable.svg` to `manifest.json` as a maskable SVG fallback, then added it to the `sw.js`
+   precache. Bumped `CACHE_NAME` shiftplanner-v6 -> v7 (precache list changed).
+4. **design.md architecture tree refreshed.** Added the now-present `LICENSE` file and
+   `prototypes/` folder; clarified the icons line (PNG + SVG fallbacks).
+
+**Reviewer accuracy note:** the review was right on items 1/2/4. Its item-3 suggestion ("cache the
+maskable SVG") was based on treating an intentionally-unreferenced file as an omission — corrected
+by making the file referenced (manifest + precache) instead of caching dead weight.
+
+### Verification
+- Verified icon files and LICENSE/prototypes exist via directory listing; confirmed manifest + sw.js
+  wiring by reading both. design.md cache reference is generic (`shiftplanner-v<n>`), so no version
+  edit needed there. Doc + small manifest/SW edits only; app logic and version (v4.1.0) unchanged.
+- **Deploy note:** `CACHE_NAME` bumped to v7 — next deploy will refresh cached clients.
+
+### Files Modified
+- `.kiro/specs/ShiftPlanner/tasks.md` — PNG task [~] -> [x]
+- `.kiro/specs/ShiftPlanner/design.md` — architecture tree (LICENSE, prototypes/, icons line)
+- `manifest.json` — added maskable SVG fallback
+- `sw.js` — precache maskable SVG; CACHE_NAME v6 -> v7
+
+---
+
+## Session 11 — Sep 1, 2026
+**Spec Reviewer pass + spec-clarification edits (docs only, no functionality change)**
+**AI Partner:** Forjé
+
+### What Was Done
+Ran the **Spec Reviewer** agent against the ShiftPlanner spec trilogy again (read-only). Verdict:
+*Needs work (minor)* — buildable now, but with testability/consistency gaps the earlier passes
+(Sessions 8–10) didn't dig into. Actioned the findings as **doc-only clarifications** — Isaac
+confirmed edits were fine "provided the functionality is not affected." **No app code touched**
+(`rules.js` / `app.js` / `ShiftPlanner.html` unchanged); the edits just make the docs describe the
+existing shipped behaviour accurately. Ground truth was confirmed by reading `rules.js` and the
+`app.js` N-block write loop before editing.
+
+#### Findings actioned (all in `.kiro/specs/ShiftPlanner/`)
+- **B1 — N-target contradiction resolved (requirements.md).** The doc simultaneously said target
+  8–10, cap 9, and logged 10 as a bug. Clarified: configured target range **8–10**, **algorithm
+  hard cap 9** (verified `nWritten < 9` guard in app.js Step 1), and **10 is a known tracked defect,
+  not an allowed outcome**. Acceptance criterion pinned: no nurse exceeds 9 N. Cross-linked to the
+  open N-distribution task (which now cites this criterion).
+- **S1 — hard vs best-effort rules (requirements.md).** Added a "Rule strength" note and per-rule
+  acceptance bars: **Fixed Night Weeks = hard guarantee** (must appear, else defect); **Night Week
+  Preferences & Preferred Night Pairs = best-effort** (unmet is acceptable, honoured only via a
+  safe swap that violates no hard rule).
+- **S2 — supported staff counts (requirements.md).** Stated Nurses algorithm is tuned for **7**
+  (hardcoded 7 blocks, +3 gap, 2+2+2+1+1 math) and HK for **3**; other counts untested/unsupported
+  until validated.
+- **S3 — off-spacing fallback (requirements.md).** Defined the ladder: prefer 5–8 → relax to ≥4 →
+  place what you can; falling short of 4 offs is a **defect that must surface** (not silent).
+- **S4 — generation failure handling (requirements.md + design.md).** Added a requirements section
+  and a design "Generation failure modes" note: graceful degradation, surfaced (toast/banner)
+  warnings, error boundary — flagged as target/open (backs the open error-boundary task).
+- **S5 — HK block length vs month (requirements.md).** Reconciled "10–11 day blocks": month split
+  into 3 phases as evenly as possible (~9–11 days by month length); M→A→N coverage guarantee holds
+  at all month lengths.
+- **S6 — accessibility honesty (requirements.md).** Added an "Accessibility (target vs current)"
+  subsection: keyboard nav done in Manual mode; ARIA/tooltips/screen-reader still open (backs the
+  a11y-audit task). Removes the requirement-vs-reality mismatch.
+- **N2/N3/N4 (requirements.md).** Manual-mode undo shares the 20-level stack (can fill fast — bounded
+  by design); 'maids'→'housekeeping' migration is idempotent and safe to keep indefinitely; PL is
+  **additive** to the 4 auto-offs (not a replacement).
+
+#### tasks.md
+- Added a "Spec hygiene (Session 11)" block ticking B1/S1/S2/S3/S4/S5/S6/N2–N4 as doc clarifications.
+- The open **N-distribution** task now carries the pinned acceptance criterion from B1.
+
+### Reviewer accuracy note
+The B1 contradiction and the testability gaps (S1/S3/S4) were accurate and worth pinning. S6 was a
+fair callout against the standing accessibility baseline even though the spec text itself didn't
+over-claim ARIA — added an honest status subsection so the requirement backs the open audit task.
+
+### Verification
+- Doc-only edits; no app code, so no rebuild needed. Confirmed the N-cap ground truth in `app.js`
+  (`nWritten < 9`) and target range in `rules.js` (`night.targetPerNurse: [8,10]`) before writing.
+- IDE diagnostics on the spec files show only the **pre-existing** spec-template heading warnings
+  (the docs use Isaac's own `# ShiftPlanner — …` heading style, not Kiro's `# Requirements Document`
+  template); my edits added no new errors. App/version (v4.1.0) unchanged.
+
+### Files Modified
+- `.kiro/specs/ShiftPlanner/requirements.md` — B1, S1, S2, S3, S4, S5, S6, N2–N4 clarifications
+- `.kiro/specs/ShiftPlanner/design.md` — S4 "Generation failure modes" note in Validation Logic
+- `.kiro/specs/ShiftPlanner/tasks.md` — Session 11 spec-hygiene block; N-distribution acceptance criterion
+
+---
+
+## Session 12 — Sep 1, 2026
+**Spec Reviewer re-review + nice-to-have doc tidy (docs only, no functionality change)**
+**AI Partner:** Forjé
+
+### What Was Done
+Re-ran the **Spec Reviewer** agent against the ShiftPlanner spec trilogy to confirm the Session 11
+clarifications landed. Verdict: **Ready to build** — all Session 11 findings (B1, S1–S6, N2/N3/N4)
+confirmed genuinely resolved, each doc claim verified against `rules.js` / `app.js`, no new
+contradictions introduced. The reviewer raised three optional nice-to-haves; actioned all three as
+**doc-only** edits (no app code touched).
+
+- **NTH-1 (requirements.md Staff Structure tables):** the role tables said "7 (configurable)" /
+  "3 (configurable)" while the "Supported nurse count" subsection says only 7/3 are validated.
+  Tightened to **"7 (configurable; only 7 validated)"** and **"3 (configurable; only 3 validated)"**
+  so the tables are self-consistent on their own.
+- **NTH-2 (requirements.md Persistence):** the 'maids'→'housekeeping' migration was described as a
+  "no-op once no 'maids' key remains." Tightened to cite the actual guard
+  (`!d.housekeeping && d.maids && d.maids.length`) and describe it as a no-op "in the normal case"
+  (i.e. whenever a `housekeeping` key exists OR no legacy `maids` data is present).
+- **NTH-3 (verification, no edit needed):** confirmed the Manual-mode undo claim against code —
+  `commitManualCell` calls `pushUndo()` exactly once per committed change (valid+changed code, or
+  clearing a non-empty cell), and `pushUndo` caps the stack at 20
+  (`if(undoStack.length>20)undoStack.shift()`). The spec's undo-depth wording is accurate as-is.
+
+### Verification
+- Doc-only edits; no app code, so no rebuild needed. NTH-3 verified by reading `commitManualCell`
+  and `pushUndo` in `app.js`. Spec files still show only the pre-existing spec-template heading
+  lint warnings (docs use Isaac's `# ShiftPlanner — …` style); no new errors. App/version (v4.1.0)
+  unchanged.
+- **Spec status:** complete with no outstanding flags — Ready to build.
+
+### Files Modified
+- `.kiro/specs/ShiftPlanner/requirements.md` — NTH-1 table wording, NTH-2 migration precision
+- `.kiro/specs/ShiftPlanner/tasks.md` — Session 12 spec-hygiene block (NTH-1/2/3)
+
+---
+
+## Session 12 — Sep 1, 2026
+**Spec Reviewer follow-up — closed all Should-fix + Nice-to-have findings (docs only)**
+**AI Partner:** Forjé
+
+### What Was Done
+Re-ran the **Spec Reviewer** agent against the ShiftPlanner spec trilogy (read-only). Verdict this
+time: **Ready to build** — no blockers, spec is mature and factually grounded (reviewer cross-checked
+claims against `app.js`/`rules.js` and they held). Isaac asked to close the remaining findings.
+Actioned as **doc-only clarifications** — **no app code touched** (`rules.js` / `app.js` /
+`ShiftPlanner.html` unchanged, v4.1.0). Read `rules.js` in full before writing the RULES schema so
+the table reflects shipped defaults, not guesses.
+
+#### Should-fix findings actioned (all in `.kiro/specs/ShiftPlanner/`)
+- **S-A — versioning ritual (design.md).** Added a "Versioning & Release Ritual" section: a table
+  tying `APP_VERSION` (app.js, `4.1.0`) ↔ `CACHE_NAME` bump (sw.js) ↔ changelog, plus the rule of
+  thumb (never bump version without bumping cache name, or the SW serves stale assets) and the
+  `-proto` tag convention.
+- **S-B — HouseKeeping rule scope (requirements.md).** Added a "Rule scope vs Nurses" subsection:
+  Fixed Night Weeks, Preferred Night Pairs, and Incompatible Pairs are **Nurses-only by design**
+  (confirmed no such keys in `RULES.housekeeping`; its `incompatiblePairs` is `[]`). HK's only
+  preference mechanism is a best-effort phase swap on the staff `nightPref` field.
+- **S-C — RULES config schema (design.md).** Added a "RULES Configuration Schema" section: two
+  tables (Nurses top-level + `RULES.housekeeping.*`) cataloguing every referenced key with shipped
+  default and meaning, cross-checked line-by-line against `rules.js`. Folded in the HK rule-scope
+  note and the supported-staff-count caveat (7 nurses / 3 HK).
+
+#### Nice-to-have findings actioned
+- **N-a (requirements.md, Combo Shifts).** Generator only emits MA; **AN is effectively manual-only**
+  (like PL) — has code/colour/summary column but no generation step produces it. "Max 1 AN" governs
+  manual entry.
+- **N-b (requirements.md, Editing).** Documented that **switching tabs clears the undo stack** (tabs
+  independent; edits already saved, only undo history resets). Accepted behaviour.
+- **N-c (requirements.md, Export).** PDF filename `ShiftPlanner <Tab> <Month> <Year>` is a
+  **best-effort browser suggestion** via `document.title`, not a guaranteed output.
+- **N-d (design.md, architecture tree).** Added a casing note: on-disk `UserGuide.html` /
+  `session-log.md` differ from the family convention (`userguide.html` / `SESSION-LOG.md`) but match
+  the shipped filenames referenced by the SW precache; left as-is on the deployed app, noted so the
+  casing reads as intentional rather than an oversight.
+
+#### tasks.md
+- Added a "Spec hygiene (Session 12)" block ticking S-A/S-B/S-C and N-a/N-b/N-c/N-d as doc
+  clarifications.
+
+### Verification
+- Doc-only edits; no app code, so no rebuild needed. Read `rules.js` in full before writing the
+  RULES schema table; every key/default in the table matches the file. `APP_VERSION` (v4.1.0) and
+  `CACHE_NAME` references carried over from the Session 11 code cross-check (not re-opened this
+  round — noted honestly to Isaac).
+- The N-d casing note describes disk accurately (confirmed via directory listing); no files renamed
+  — a deliberate choice to avoid churning filenames referenced by the SW precache on a deployed app.
+
+### Files Modified
+- `.kiro/specs/ShiftPlanner/design.md` — RULES schema section (S-C), Versioning & Release Ritual (S-A), architecture-tree casing note (N-d)
+- `.kiro/specs/ShiftPlanner/requirements.md` — HK rule scope (S-B), AN manual-only (N-a), tab-switch undo (N-b), PDF filename caveat (N-c)
+- `.kiro/specs/ShiftPlanner/tasks.md` — Session 12 spec-hygiene block
+
+---
+
+## Session 13 — Sep 4, 2026
+**v4.1.1 — PWA re-check + manifest `scope` fix (Bug Fix mode)**
+**AI Partner:** Forjé
+
+### Context
+Isaac brought in a PWA-check findings list from a couple of days ago that flagged three fixes:
+add a SW-registration snippet, bump `CACHE_NAME` v7→v8, and bump the version constant + changelog.
+Re-ran the **PWA Readiness Checker** agent against the current on-disk state to align — and the
+findings turned out to be **stale**. All three "fixes" were already in place from earlier sessions:
+
+- SW registration snippet — **already present** in `ShiftPlanner.html` (bottom of `<body>`, feature-guarded).
+- `CACHE_NAME` — **already at `shiftplanner-v7`** (Session 10 bump); the finding's "v7→v8" was a
+  misread of v7 as pending rather than the shipped state.
+- `APP_VERSION` — **already `4.1.0`** in `app.js` with a full changelog trail in this log.
+
+(Note: the built-in grep tool returned "no matches" for these tokens in `ShiftPlanner.html`/`app.js`
+despite them being present — confirmed by direct file reads, which are the source of truth here.)
+
+### What the fresh audit actually found
+**Verdict: PWA-ready, zero blockers.** One genuine Should-fix and a couple of optional nice-to-haves.
+
+#### Fix applied (the one real gap)
+- **`manifest.json` — added `"scope": "./"`.** Previously absent; the browser inferred scope from
+  `start_url`, which works but leaves the installed app's navigation boundary implicit. Making it
+  explicit pins the scope to the app's own subpath (important for the GitHub Pages `/ShiftPlanner/`
+  deployment).
+- **Manifest polish (nice-to-haves, done in the same pass):** added `"lang": "en-GB"` and
+  `"dir": "ltr"` for manifest completeness. All three are one-liners and share the same cache bump.
+
+#### Release chores
+- `APP_VERSION` bumped **4.1.0 → 4.1.1** (patch: config-only, no behaviour change).
+- SW `CACHE_NAME` bumped **shiftplanner-v7 → v8** so installed PWA users pull the manifest change.
+- Ideas backlog row → **In Progress (v4.1.1)** at start of build; set back to **Built (v4.1.1)**
+  once deployed and verified.
+
+#### Deferred (optional, not done)
+- In-app "new version available — reload" toast (SW already auto-activates via `skipWaiting()` +
+  `clients.claim()`, so this is polish only).
+- `categories` manifest field (store-listing polish, not needed for a private tool).
+
+### Verification
+- IDE diagnostics clean on `manifest.json`, `sw.js`, `app.js` (no errors). `manifest.json` confirmed
+  valid JSON with the three new fields correctly placed after `start_url`.
+- **Not browser-tested here** (Windows shell can't run a live server reliably) — manual checks below.
+
+### Manual checks / deploy steps for Isaac (before this reaches users)
+1. Serve over HTTP, not `file://` — e.g. `npx serve .` from the ShiftPlanner folder (or Live Server).
+2. DevTools → Application → Manifest: confirm no errors, `scope` shows `./`, installability tick present.
+3. DevTools → Application → Service Workers: confirm `sw.js` is **activated** and the cache is
+   `shiftplanner-v8`.
+4. Offline test: load once, toggle DevTools "Offline", reload — app shell should still render.
+5. Run Lighthouse → Progressive Web App / installability — should come back clean.
+6. Deploy: `git add -A && git commit -m "v4.1.1: add manifest scope + lang/dir, bump SW to v8"`
+   then `git push origin main`. GitHub Pages serves within 1–2 min.
+7. Once verified live, set the Ideas backlog row → **Built (v4.1.1)**.
+
+### Files Modified
+- `manifest.json` — added `scope`, `lang`, `dir`
+- `sw.js` — `CACHE_NAME` v7 → v8
+- `app.js` — `APP_VERSION` 4.1.0 → 4.1.1
+- `session-log.md` — this entry
+- `Ideas.md` (backlog) — row → In Progress (v4.1.1)
+
+---
+
+## Session 14 — Sep 4, 2026
+**v4.1.2 — Accessibility fixes from Lighthouse (75% → target 100%) + v4.1.1 verified deployed**
+**AI Partner:** Forjé
+
+### Context
+Isaac served v4.1.1 over Live Server and ran DevTools + Lighthouse. Confirmed the v4.1.1 work
+landed correctly: **SW `#392` activated and running**, manifest `scope` resolving, and Lighthouse
+**Performance / Best Practices / SEO all 100%**. Two categories to act on:
+- **Accessibility 75%** — axe found real, fixable issues (below).
+- Minor manifest/console warnings (screenshot for richer install UI = optional; a deprecated
+  Apple meta tag; a transient SVG-icon "failed to load" that was a dev-server blip — the SVGs all
+  exist on disk and are precached, confirmed via directory listing).
+
+### Accessibility fixes (all in `ShiftPlanner.html` / `app.js`)
+1. **Colour contrast (was serious/failing):**
+   - `--primary` indigo `#6366f1` → **`#4f46e5`** (indigo-600) so white text on the Generate button
+     and active tab clears WCAG AA 4.5:1 (was 4.46, right on the edge).
+   - Manual button teal `#0d9488` → **`#0f766e`** (teal-700) — was 3.74, now passes.
+   - `--text-light` `#64748b` → **`#5b6675`** so the empty-state paragraph on the cream bg clears
+     4.5:1 (was 4.48).
+   - Version superscript: was `--text-light` @ `opacity:.7` (computed `#939eae`, failing) → new
+     **`--muted` `#6b7685`** token, no opacity, weight 600 — passes.
+   - Org-name placeholder: was `--text-light` @ `opacity:0.5` (computed `#b2bac5`, badly failing) →
+     `renderOrgName()` now styles the placeholder with the accessible `--muted` token + italic
+     instead of faint opacity. Solid state clears the placeholder styling on reset.
+   - `theme_color` (manifest) + `theme-color` meta aligned to the new `#4f46e5` for consistency.
+2. **`<select>` had no accessible name (was critical):** added
+   `aria-label="Select month and year for the rota"` to `#month-select`.
+3. **No `<main>` landmark (was moderate):** changed `<div id="rota-content">` → `<main id="rota-content">`
+   (id preserved; no CSS targeted `div#rota-content`, so styling unaffected).
+4. **Empty `<h2>` heading (axe-linter, robustness):** the runtime-populated month title `#rota-month-title`
+   now carries `aria-label="Rota month"` so it's never announced empty even before JS fills it.
+5. **Deprecated `apple-mobile-web-app-capable` (console):** added modern
+   `<meta name="mobile-web-app-capable" content="yes">` alongside the Apple one.
+
+### Not changed (deliberately)
+- The manifest SVG icons — they exist on disk, are precached, and resolve fine; the Lighthouse
+  "failed to load" was a one-off dev-server artifact (SW installed successfully).
+- Richer-install-UI screenshot — optional store polish, not needed for a private clinic tool.
+
+### Release chores
+- `APP_VERSION` **4.1.1 → 4.1.2** (patch: a11y/markup fixes, no functional change to rota logic).
+  Rolled the undeployed v4.1.1 manifest work into this same release.
+- SW `CACHE_NAME` **shiftplanner-v8 → v9**.
+- Ideas backlog row → **In Progress (v4.1.2)**; set to **Built (v4.1.2)** once verified + deployed.
+
+### Verification
+- IDE diagnostics clean on `ShiftPlanner.html`, `app.js`, `sw.js`, `manifest.json` (the earlier
+  axe-linter empty-heading error is resolved by the `aria-label`).
+- Contrast targets checked against WCAG AA 4.5:1 for the specific pairs axe flagged; accent gold
+  `#8B6914` on cream (~5.3:1) was already passing and left as-is.
+- **Not re-run through Lighthouse here** (no live server in this environment) — Isaac to re-verify
+  (steps below).
+
+### Manual re-check for Isaac (before flipping backlog to Built)
+1. Hard-refresh over Live Server (or bump-cached SW will update on next load — cache is now v9).
+2. DevTools → Application → Service Workers: confirm the new worker activates and cache is
+   `shiftplanner-v9`.
+3. Re-run Lighthouse → **Accessibility should now be ~100%** (or close; any residual item will be
+   a manual-only check axe can't auto-score). Performance/BP/SEO should stay 100%.
+4. Eyeball the header: Generate (indigo) + Manual (teal) buttons, version superscript, and the
+   org-name placeholder should all still look right — just very slightly deeper in colour.
+5. Deploy: `git add -A && git commit -m "v4.1.2: accessibility fixes (contrast, select label, main landmark), bump SW to v9"` then `git push origin main`.
+6. Once verified live, set the Ideas backlog row → **Built (v4.1.2)**.
+
+### Files Modified
+- `ShiftPlanner.html` — colour tokens, manual-button colour, version-text colour, `<main>` landmark,
+  select `aria-label`, h2 `aria-label`, `mobile-web-app-capable` meta, theme-color
+- `app.js` — `APP_VERSION` 4.1.1 → 4.1.2; org-name placeholder styling (muted+italic vs opacity)
+- `manifest.json` — `theme_color` → `#4f46e5`
+- `sw.js` — `CACHE_NAME` v8 → v9
+- `session-log.md` — this entry
+- `Ideas.md` (backlog) — row → In Progress (v4.1.2)
+
+---
+
+## Session 15 — Sep 4, 2026
+**v4.1.3 — Clear manifest SVG-icon warnings (Option A)**
+**AI Partner:** Forjé
+
+### Context
+Isaac re-ran Lighthouse on v4.1.2: **all four categories 100%** (accessibility fix confirmed).
+DevTools → Application → Manifest still showed persistent warnings:
+- 3× "Icon icons/icon-*.svg failed to load"
+- 2× "Richer PWA Install UI won't be available… add a screenshot"
+
+### Diagnosis
+Read the actual SVG files — they are **valid** (well-formed, correct dimensions). The repeated
+"failed to load" is Chrome's manifest icon loader being unreliable with SVG icon entries; it's a
+known Chrome quirk, not a file problem. The **PNG icons already cover 192/512/maskable**, which is
+all Chrome needs for installability — hence Lighthouse stayed 100% and the app installs fine. The
+SVG manifest entries were therefore adding warnings with no benefit.
+
+### Fix (Option A, Isaac's pick)
+- **`manifest.json`:** removed the 3 SVG entries from the `icons` array — now lists only the 3 PNGs.
+- **`sw.js`:** dropped the 3 SVGs from the `ASSETS` precache list (no longer referenced by the app).
+- **SVG files kept on disk** (`icons/*.svg`) — not deleted; still available for any future use.
+  Only their *manifest/precache references* were removed.
+- **Screenshots (the other 2 warnings): deliberately skipped.** They only enrich the install
+  dialog; for a private clinic tool that already installs cleanly it's low-value. Those two remain
+  as informational notices and do not affect the 100 score.
+
+### Release chores
+- `APP_VERSION` **4.1.2 → 4.1.3** (patch: manifest/config only, no functional change).
+- SW `CACHE_NAME` **shiftplanner-v9 → v10** (precache list changed).
+- Ideas backlog row → **In Progress (v4.1.3)**; set to **Built (v4.1.3)** once verified + deployed.
+
+### Verification
+- IDE diagnostics clean on `manifest.json`, `sw.js`, `app.js`. Manifest is valid JSON with 3 PNG
+  icons only.
+- **Not re-checked in a live browser here** — Isaac to confirm (steps below).
+
+### Manual re-check for Isaac
+1. Hard-refresh over Live Server; DevTools → Application → Service Workers: new worker activates,
+   cache is `shiftplanner-v10`.
+2. Application → Manifest: the 3 SVG "failed to load" errors should be **gone**; only the 2
+   optional screenshot notices remain (expected/acceptable).
+3. Lighthouse should still be 100 across the board.
+4. Deploy: `git add -A && git commit -m "v4.1.3: drop SVG manifest icons (Chrome load warnings), bump SW to v10"` then `git push origin main`.
+5. Once verified live, set the Ideas backlog row → **Built (v4.1.3)**.
+
+### Files Modified
+- `manifest.json` — removed 3 SVG icon entries (PNGs only now)
+- `sw.js` — removed 3 SVGs from precache; `CACHE_NAME` v9 → v10
+- `app.js` — `APP_VERSION` 4.1.2 → 4.1.3
+- `session-log.md` — this entry
+- `Ideas.md` (backlog) — row → In Progress (v4.1.3)

@@ -1,5 +1,5 @@
 // ShiftPlanner Service Worker — Offline Caching
-var CACHE_NAME = 'shiftplanner-v6';
+var CACHE_NAME = 'shiftplanner-v10';
 var ASSETS = [
   './',
   './ShiftPlanner.html',
@@ -8,9 +8,7 @@ var ASSETS = [
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/icon-maskable-512.png',
-  './icons/icon-192.svg',
-  './icons/icon-512.svg'
+  './icons/icon-maskable-512.png'
 ];
 
 // Install: cache all essential assets

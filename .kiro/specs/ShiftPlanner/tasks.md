@@ -12,13 +12,56 @@
 - [x] Remove all `console.log` debug statements from `app.js` (Session 6 — also removed a dead no-op diagnostic loop; SW-registration log downgraded to `console.warn`)
 - [x] Remove cache-busting `?v=5` from `<script>` tags in `ShiftPlanner.html` (Session 6 — rely on SW cache versioning)
 - [x] Bump `CACHE_NAME` in `sw.js` after cleanup changes (Session 6 — `shiftplanner-v4` → `v5`)
-- [~] Convert SVG icons to PNG (192px, 512px) for Chrome PWA install banner support (Session 6 — manifest/HTML/SW wired for PNG + browser-based generator `icons/generate-png-icons.html` created; **manual step remaining:** open the generator and download the 3 PNGs into `icons/` before next deploy)
+- [x] Convert SVG icons to PNG (192px, 512px, maskable-512) for Chrome PWA install banner support (Session 6 generated + wired; **verified present on disk and precached** Session 10 — `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` all in `icons/`, listed first in `manifest.json`, and in the `sw.js` precache. No manual step outstanding.)
+
+### Spec hygiene (from Spec Reviewer pass, Session 8)
+
+- [x] Annotate design.md algorithm step numbering (Step 7 with no Step 6 — Step 6/8 removed in Session 5; note added, references kept)
+- [x] Align off-spacing wording across requirements.md and design.md (5–8 window, fallback 4; HK parity)
+- [x] Document Manual-mode validation in design.md Validation Logic section
+- [x] Add Build Standards flags block (rigour / stack / platforms / data-privacy) to requirements.md
+- [x] Refresh icon wording in design.md (architecture tree + PWA section) and requirements.md PWA section to reflect PNG icons added in Session 6 (SVG now fallback) (Session 9)
+- [x] Decide a license for ShiftPlanner and add a LICENSE file — **MIT**, `Copyright (c) 2026 Isaac A. Gera` (Session 9)
+
+### Spec hygiene (from Spec Reviewer pass, Session 11)
+
+Doc-only clarifications — no functionality changed:
+
+- [x] **B1** — Resolve N-target contradiction in requirements.md: target range 8–10, **algorithm hard cap 9** (`nWritten < 9` guard in app.js Step 1), 10 is a known tracked defect not an allowed outcome. Acceptance criterion: no nurse exceeds 9 N.
+- [x] **S1** — Distinguish hard guarantee (Fixed Night Weeks — must hold) from best-effort rules (Night Week Preferences, Preferred Night Pairs — miss is acceptable); added a measurable acceptance bar for each.
+- [x] **S2** — State supported staff counts: Nurses tuned for 7, HK for 3; other counts untested/unsupported until validated.
+- [x] **S3** — Define off-spacing fallback (5–8 → ≥4 → place-what-you-can) and that falling short of 4 offs is a defect that must surface, not fail silently.
+- [x] **S4** — Add "Generation failure handling" to requirements.md and a failure-modes note to design.md (graceful degradation, surfaced warnings, error boundary) — backs the open error-boundary task.
+- [x] **S5** — Reconcile HK "10–11 day blocks" with month length (3 phases split evenly, ~9–11 days; M→A→N guarantee holds at all month lengths).
+- [x] **S6** — Add honest Accessibility (target vs current) subsection: keyboard nav done in Manual mode; ARIA/tooltips/screen-reader still open (backs the accessibility-audit task).
+- [x] **N2/N3/N4** — Documented Manual-mode undo depth (shared 20-level stack), 'maids'→'housekeeping' migration is idempotent/safe-to-keep, and PL is additive to the 4 auto-offs (not a replacement).
+
+### Spec hygiene (Spec Reviewer re-review, Session 12)
+
+Re-review verdict: **Ready to build** — all Session 11 findings confirmed resolved against code.
+Actioned the 3 optional nice-to-haves (doc-only):
+
+- [x] **NTH-1** — Staff Structure tables now read "7 (configurable; only 7 validated)" / "3 (configurable; only 3 validated)" so they're self-consistent without relying on the later subsection.
+- [x] **NTH-2** — Migration wording tightened to cite the actual guard (`!d.housekeeping && d.maids && d.maids.length`) and describe it as a no-op "in the normal case."
+- [x] **NTH-3** — Verified in code (no edit needed): `commitManualCell` calls `pushUndo()` exactly once per committed change; `pushUndo` caps the stack at 20 (`if(undoStack.length>20)undoStack.shift()`). The undo-depth spec claim is accurate.
+
+### Spec hygiene (from Spec Reviewer pass, Session 12)
+
+Doc-only clarifications — no functionality changed:
+
+- [x] **S-A** — Added a "Versioning & Release Ritual" section to design.md tying `APP_VERSION` (app.js, `4.1.0`) ↔ `CACHE_NAME` bump (sw.js) ↔ changelog, so the release ritual is specified rather than tribal knowledge.
+- [x] **S-B** — Added a "Rule scope vs Nurses" subsection to requirements.md HouseKeeping: Fixed Night Weeks, Preferred Night Pairs, and Incompatible Pairs are Nurses-only by design (no `RULES.housekeeping` keys; `incompatiblePairs` intentionally empty). HK night handling is best-effort phase swap on the `nightPref` field only.
+- [x] **S-C** — Added a "RULES Configuration Schema" table to design.md cataloguing every referenced `RULES.*` key (Nurses top-level + `RULES.housekeeping.*`) with shipped defaults and meaning, cross-checked against `rules.js`. Includes the HK rule-scope note and supported-staff-count caveat.
+- [x] **N-a** — Clarified in requirements.md (Combo Shifts) that the generator only emits MA; **AN is effectively manual-only** (like PL), so the "max 1 AN" target governs manual entry.
+- [x] **N-b** — Noted in requirements.md (Editing) that **switching tabs clears the undo stack** (tabs are independent; edits are already saved, only undo history resets). Accepted behaviour.
+- [x] **N-c** — Added a PDF-filename caveat in requirements.md (Export): the `ShiftPlanner <Tab> <Month> <Year>` name is a **best-effort browser suggestion** via `document.title`, not guaranteed.
+- [x] **N-d** — Added a file-name casing note to the design.md architecture tree: on-disk `UserGuide.html` / `session-log.md` differ from the family convention but match shipped filenames; left as-is on the deployed app, noted so it reads as intentional.
 
 ---
 
 ## Algorithm Improvements (Priority: Medium)
 
-- [ ] **Nurses N-distribution edge case:** Occasionally one nurse gets 10N when both their blocks are 5-day blocks. Add a check to cap at 9 by trimming the second block's last day and reassigning to M/A.
+- [ ] **Nurses N-distribution edge case:** Occasionally one nurse gets 10N when both their blocks are 5-day blocks. Add a check to cap at 9 by trimming the second block's last day and reassigning to M/A. **(Acceptance criterion now pinned by B1: no nurse may exceed 9 N in a generated rota.)**
 - [ ] **Night week preference accuracy:** Validate that block swapping for preferences actually produces correct week placement across all months (test Aug–Dec 2026).
 - [ ] **Preferred night pairs:** Currently best-effort. Investigate whether pairing formula can be adjusted to honour preferred pairs more consistently.
 - [ ] **Month carry-forward:** Allow copying last few days of previous month to inform block continuity at month boundaries (e.g., if nurse ended previous month on N-block day 3, continue into new month).
