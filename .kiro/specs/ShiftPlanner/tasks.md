@@ -82,7 +82,7 @@ Doc-only clarifications — no functionality changed:
 
 - [ ] **Print layout fine-tuning:** Test PDF output on different printers/paper sizes; adjust margins if content overflows.
 - [ ] **Mobile responsiveness:** Improve table scrolling and touch targets for phone-sized screens.
-- [ ] **Dark mode:** Add optional dark theme (respect `prefers-color-scheme`).
+- [x] **Dark mode:** Optional Light/Dark theme with header toggle, `sp_theme` persistence, `prefers-color-scheme` default, WCAG-AA contrast in both themes, flash-of-light guard, print-stays-light (v4.2.0, Session 16).
 - [x] **Keyboard navigation:** Arrow-key + Tab/Enter movement through rota cells (Manual mode, v4.1). Auto-mode cells still use the click-to-edit popup.
 - [ ] **Tooltips on hover:** Show shift time (e.g., "8AM–2PM") when hovering over a cell.
 
@@ -108,6 +108,9 @@ Doc-only clarifications — no functionality changed:
 
 ## Completed (Reference)
 
+- [x] **v4.2.0 — Light/Dark theme toggle** (two-state header toggle, `sp_theme` persistence, OS-pref default, tokenised colour system, `[data-theme=dark]` block) (Session 16)
+- [x] **v4.2.0 — Dark-mode contrast to WCAG AA** (`.btn`/`select`/`.shift-btn` text colour, Sunday-red, Manual/Warning alert bodies; Lighthouse Accessibility 100 in both themes) (Session 16)
+- [x] **v4.2.0 — Flash-of-light guard** (inline `<head>` script sets theme before paint) + **print always light** (print resets theme tokens) + **Staff Setup dark polish** (Session 16)
 - [x] **v4.1.0 — Manual rota mode** (spreadsheet-style entry, valid codes, editable G-row, keyboard nav, confirm-before-clear; both tabs) (Session 7)
 - [x] **v4.1.0 — Live Shift Count + coverage/asterisk updates during manual entry**; Total column = live sum (Session 7)
 - [x] **v4.1.0 — Highlight persists during cell edit** (Session 7)

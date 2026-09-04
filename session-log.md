@@ -984,3 +984,97 @@ SVG manifest entries were therefore adding warnings with no benefit.
 - `app.js` — `APP_VERSION` 4.1.2 → 4.1.3
 - `session-log.md` — this entry
 - `Ideas.md` (backlog) — row → In Progress (v4.1.3)
+
+---
+
+## Session 16 — Sep 4, 2026
+**v4.2.0 — Light/Dark theme toggle (prototype-first, then ported) + dark-mode contrast + flash-of-light fix**
+**AI Partner:** Forjé
+
+### Workflow
+Followed the **prototype-first** standing rule. Built and iterated the whole theme system in
+`prototypes/ShiftPlanner-prototype.html` + `app-proto.js` (sandbox, `spproto_`-namespaced storage
+so it could never touch live data), got Isaac's Live-Server sign-off with Lighthouse **100 across
+all four categories** in both light and dark, then ported the finalized work into the live app in
+one deliberate pass with the release chores.
+
+### What Was Built (v4.2.0)
+
+#### Two-state Light/Dark theme toggle (new)
+- New **🌙 / ☀️ toggle button** (first control in the header, before the month picker).
+  `aria-pressed` + dynamic `aria-label`/`title`; icon flips sun/moon with the theme.
+- Choice **persisted** in `localStorage` (`sp_theme`). On first visit (no stored choice) the app
+  **follows the OS preference** (`prefers-color-scheme`). `data-theme` lives on `<html>`.
+- Exposed as `SP.toggleTheme()` / `SP.setTheme()`; `applyTheme(loadTheme())` runs at script load to
+  sync the button + `theme-color` meta.
+
+#### Tokenised colour system (enabler)
+- Refactored all previously-hardcoded colours in `ShiftPlanner.html` into CSS custom properties:
+  shift-cell bg/fg pairs (`--sh-*`), coverage chips (`--cov-*`), surfaces (`--surface`,
+  `--surface-alt`, `--total-bg`), selection (`--sel-bg`), manual hint bar (`--hint-*`), plus
+  Staff-Setup row/chip tokens (`--staff-*`, `--pair-chip-bg`, `--danger-heading`).
+- Light values = the exact original colours, so **light mode is visually unchanged**.
+- A single `[data-theme="dark"]` block overrides those tokens with contrast-checked dark values.
+- `app.js` coverage/asterisk colours (in `render()` + `refreshSummaryAndCoverage()`) now write
+  `var(--cov-*)` / `var(--cov-ok-fg)` so they recolour correctly in dark (were hardcoded hex).
+
+#### Dark-mode contrast fixes (all WCAG AA)
+Prototype started at Accessibility 95% (only `color-contrast` failing); fixed to **100**:
+- `.btn`, `select`, `.shift-btn` given explicit `color:var(--text)` (were inheriting black on dark
+  surfaces → ~1.3:1).
+- Sunday `.sun` day-headers: red `#dc2626` → `#fca5a5` in dark (passed on both surface and the
+  `--cov-danger` background of a red-coverage Sunday).
+- Manual "Start blank manual rota?" confirm alert **and** the validation "Warning" alert: body text
+  `#555` → `var(--text-light)` (was near-invisible on the dark alert surface).
+
+#### Staff Setup dark-mode polish
+- Tokenised the light-only staff-row backgrounds (active green / inactive red), the incompatible-pair
+  chip, and the "Incompatible Pairs" heading so they read correctly in dark (muted dark equivalents).
+
+#### Flash-of-light fix
+- Added a tiny inline `<head>` script that sets `data-theme` + the `theme-color` meta from
+  `localStorage`/`prefers-color-scheme` **before the body paints**, so dark-mode users never see a
+  one-frame flash of the light theme on load. `app.js` re-applies later to sync the toggle button.
+
+#### Print stays light
+- The `@media print` block resets **both** `:root` and `[data-theme="dark"]` tokens to their light
+  values, so printing/PDF is always light regardless of the on-screen theme (no wasted toner).
+
+### Release chores
+- `APP_VERSION` bumped **4.1.3 → 4.2.0** (minor: new user-facing feature).
+- SW `CACHE_NAME` bumped **shiftplanner-v10 → v11** so installed PWA users pull the update.
+- Ideas backlog row → **In Progress (v4.2.0)** at start of port; set to **Built (ShiftPlanner v4.2.0)**
+  once deployed and verified.
+
+### Verification
+- IDE diagnostics clean on `ShiftPlanner.html`, `app.js`, `sw.js`.
+- Storage keys resolve to the original `sp_*` (via `PK='sp_'`) — existing users' staff/rotas load
+  seamlessly; the only new key is `sp_theme`. No data migration needed.
+- Contrast verified in the prototype via Lighthouse (Isaac): **100 across all four categories** in
+  both themes, including the Manual/Warning dialogs.
+- **Not browser-tested in this environment** (Windows shell can't run a live server reliably) —
+  Isaac to re-verify the live app before/after deploy (steps below).
+
+### Manual re-check for Isaac (before flipping backlog to Built)
+1. Hard-refresh over Live Server; DevTools → Application → Service Workers: new worker activates,
+   cache is `shiftplanner-v11`.
+2. Toggle the 🌙/☀️ button — both themes across Nurses + HouseKeeping, shift grid, summary,
+   coverage headers, Staff Setup modal, Manual mode + its confirm dialog. Confirm the choice
+   persists across reload and that there's **no flash of light** on a dark-mode reload.
+3. Export PDF preview in dark mode → should render **light**.
+4. Re-run Lighthouse in dark mode → Accessibility should stay **100** (Perf/BP/SEO too).
+5. Deploy: `git add -A && git commit -m "v4.2.0: light/dark theme toggle + dark-mode contrast + flash-of-light fix, bump SW to v11"` then `git push origin main`.
+6. Once verified live, set the Ideas backlog row → **Built (ShiftPlanner v4.2.0)**.
+
+### Files Modified
+- `ShiftPlanner.html` — colour tokens, `[data-theme="dark"]` block, print token-reset, theme toggle
+  button, flash-of-light inline `<head>` script, `.btn`/`select`/`.shift-btn` `color:var(--text)`,
+  Sunday-red dark override, reduced-motion transitions, `.btn-theme` styles
+- `app.js` — theme functions (`systemPrefersDark`/`loadTheme`/`applyTheme`/`setTheme`/`toggleTheme`),
+  `SP.toggleTheme`/`SP.setTheme`, coverage/asterisk colours → `var(--cov-*)`, both alert bodies →
+  `var(--text-light)`, Staff-Setup token swaps, `APP_VERSION` 4.1.3 → 4.2.0
+- `sw.js` — `CACHE_NAME` v10 → v11
+- `UserGuide.html` — theme-toggle documentation (this session)
+- `.kiro/specs/ShiftPlanner/*` — requirements/design/tasks updated for the theme feature
+- `Ideas.md` (backlog) — row → In Progress (v4.2.0)
+- `prototypes/` — theme prototype kept for future iteration

@@ -1,5 +1,5 @@
 // ShiftPlanner Service Worker — Offline Caching
-var CACHE_NAME = 'shiftplanner-v10';
+var CACHE_NAME = 'shiftplanner-v11';
 var ASSETS = [
   './',
   './ShiftPlanner.html',

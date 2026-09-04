@@ -31,6 +31,40 @@ ShiftPlanner/
 
 ---
 
+## Theme System (Light / Dark) — v4.2.0
+
+**Token-based theming.** All themeable colours are CSS custom properties defined on `:root`
+(light values = the original palette, so light mode is visually unchanged). A single
+`[data-theme="dark"]` block overrides those tokens with dark, contrast-checked values. Structure
+and layout are identical between themes — only token *values* change.
+
+- **Token groups:** core (`--primary`, `--primary-accent`, `--accent`, `--bg`, `--surface`,
+  `--surface-alt`, `--total-bg`, `--text`, `--text-light`, `--muted`, `--border`); shift cells
+  (`--sh-{M,G,A,N,O,PL,MA,AN}-bg`/`-fg`); coverage (`--cov-ok`/`-warn`/`-danger`/`-ok-fg`);
+  selection (`--sel-bg`); manual hint bar (`--hint-bg`/`-border`/`-fg`); Staff-Setup
+  (`--staff-active-bg`/`-border`, `--staff-inactive-bg`/`-border`, `--pair-chip-bg`,
+  `--danger-heading`).
+- **`--primary` split:** `--primary` is the interactive *fill* (white text on it), `--primary-accent`
+  is primary-as-*text/border* on surfaces — split so both pass AA in dark (fill stays `#4f46e5`;
+  accent lightens to `#a5b4fc`).
+- **JS-set colours tokenised:** coverage backgrounds + the fully-staffed asterisk (written inline by
+  `render()` and `refreshSummaryAndCoverage()`) use `var(--cov-*)` / `var(--cov-ok-fg)` so they
+  recolour with the theme.
+
+**Control flow.**
+- `data-theme` lives on `<html>` (`documentElement`).
+- **Inline `<head>` script (flash-of-light guard):** before the body paints, reads `sp_theme`
+  (else `prefers-color-scheme`) and sets `data-theme` + the `theme-color` meta.
+- **`app.js` theme functions:** `systemPrefersDark()`, `loadTheme()` (reads `sp_theme`, falls back to
+  OS pref), `applyTheme(theme)` (sets `data-theme`, updates `theme-color` meta `#0f141b`/`#4f46e5`,
+  syncs the toggle button's icon + `aria-pressed`/label), `setTheme(theme)` (persist + apply),
+  `toggleTheme()` (flip + toast). `applyTheme(loadTheme())` runs at script load. Exposed as
+  `SP.toggleTheme` / `SP.setTheme`.
+- **Print:** `@media print` resets both `:root` and `[data-theme="dark"]` tokens to light values —
+  print/PDF is always light. Motion transitions gated behind `prefers-reduced-motion`.
+
+---
+
 ## Data Model
 
 ### State Object (in-memory)

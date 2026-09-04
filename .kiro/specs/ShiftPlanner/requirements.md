@@ -24,6 +24,26 @@ The app is a single-folder, zero-dependency vanilla JS web application designed 
 
 ---
 
+## Theme (Light / Dark) — v4.2.0
+
+- **Two-state toggle** (Light / Dark) via a header button (🌙/☀️). No third "Auto" state — the
+  toggle is an explicit override; automatic OS-following applies only on first visit.
+- **Persistence:** the chosen theme is stored in `localStorage` under `sp_theme` (`'light'`/`'dark'`).
+- **First-visit default:** if no stored choice, follow the OS `prefers-color-scheme`.
+- **No flash of light:** an inline `<head>` script applies the theme (and the `theme-color` meta)
+  before the body paints, so a dark-mode user never sees a light-theme flash on load.
+- **Accessibility (hard requirement):** both themes must pass **WCAG AA (4.5:1)** for text/UI
+  contrast. Verified via Lighthouse at **100** Accessibility in both themes, including modal/alert
+  dialogs (Staff Setup, Manual confirm, validation Warning) and the Sunday-red day-headers.
+- **Print is always light:** the `@media print` block resets all theme tokens to their light values,
+  so printed rotas / exported PDFs stay on white regardless of the on-screen theme.
+- **Reduced motion respected:** theme colour transitions are gated behind
+  `prefers-reduced-motion: no-preference`.
+- **Scope:** purely presentational — the theme changes no rota logic, rules, or stored rota/staff
+  data. The only new storage key is `sp_theme`.
+
+---
+
 ## Staff Structure
 
 ### Nurses Tab

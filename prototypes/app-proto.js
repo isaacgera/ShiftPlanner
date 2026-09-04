@@ -1,15 +1,43 @@
-﻿// ShiftPlanner - App Logic — PROTOTYPE (v4.1 work)
-// This is a sandbox copy. All localStorage keys are namespaced with the PROTO prefix
-// so it cannot read or overwrite the live app's data.
+﻿// ShiftPlanner - App Logic
 (function(){'use strict';
 
 // Single source of truth for the app version (semantic: major.minor.patch).
 // This is the app version — distinct from the service-worker CACHE_NAME, which is
 // just a cache-busting tag. Bump this on every release and note it in the changelog.
-var APP_VERSION='4.1.0-proto';
+var APP_VERSION='4.2.0-proto';
 
-// PROTOTYPE storage namespace — keeps sandbox data separate from the live app.
+// localStorage key prefix for all app data.
+// PROTOTYPE: namespaced with 'spproto_' so this sandbox can never read or overwrite
+// the live app's real data (which uses 'sp_'). Do not change back when porting — the
+// port to the live app re-uses 'sp_'.
 var PK='spproto_';
+
+// ======= THEME (light/dark) =======
+// Two-state toggle. Persisted in localStorage (PK+'theme'). On first visit (no stored
+// choice) we follow the OS preference (prefers-color-scheme). data-theme lives on <html>.
+function systemPrefersDark(){return window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches}
+function loadTheme(){var t=localStorage.getItem(PK+'theme');return(t==='dark'||t==='light')?t:(systemPrefersDark()?'dark':'light')}
+function applyTheme(theme){
+  var dark=theme==='dark';
+  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+  // Keep the PWA/browser chrome colour in step with the theme.
+  var meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute('content',dark?'#0f141b':'#4f46e5');
+  // Update the toggle button's icon + accessible state.
+  var btn=document.getElementById('btn-theme');
+  if(btn){
+    btn.setAttribute('aria-pressed',dark?'true':'false');
+    var label=dark?'Switch to light theme':'Switch to dark theme';
+    btn.setAttribute('aria-label',label);
+    btn.setAttribute('title',label);
+    var icon=btn.querySelector('.theme-icon');
+    if(icon)icon.textContent=dark?'☀️':'🌙';
+  }
+}
+function setTheme(theme){localStorage.setItem(PK+'theme',theme);applyTheme(theme)}
+function toggleTheme(){var next=(loadTheme()==='dark')?'light':'dark';setTheme(next);showToast(next==='dark'?'Dark theme':'Light theme')}
+// Apply the stored/preferred theme immediately at script load (before render) to avoid a flash.
+applyTheme(loadTheme());
 
 var SHIFT_LABELS={M:'8AM-2PM',G:'10AM-6PM',A:'2PM-8PM',N:'8PM-8AM',O:'Day Off',PL:'Leave',MA:'M+A',AN:'A+N'};
 var DAY_NAMES=['S','M','T','W','T','F','S'];
@@ -26,8 +54,10 @@ function renderOrgName(){
   var el=document.getElementById('org-name');
   var name=loadOrgName();
   if(el)el.textContent=name||'Click here to set organisation name';
-  if(el&&!name)el.style.opacity='0.5';
-  else if(el)el.style.opacity='1';
+  // Placeholder styling: use an accessible muted colour + italic (not faint opacity,
+  // which failed the WCAG contrast bar) so the "not set yet" state still reads clearly.
+  if(el&&!name){el.style.color='var(--muted)';el.style.fontStyle='italic'}
+  else if(el){el.style.color='';el.style.fontStyle=''}
 }
 function editOrgName(){
   var current=loadOrgName();
@@ -822,12 +852,12 @@ function render(){
     var minCov=Math.min(cov.M,cov.A,cov.N);
     var covTarget=(tab==='housekeeping')?1:2;
     var covStyle='';
-    if(minCov>=covTarget)covStyle='background:#dcfce7;';else if(minCov>=1)covStyle='background:#fef3c7;';else covStyle='background:#fee2e2;';
+    if(minCov>=covTarget)covStyle='background:var(--cov-ok);';else if(minCov>=1)covStyle='background:var(--cov-warn);';else covStyle='background:var(--cov-danger);';
     // Check if day has no one off (fully staffed)
     var hasOff=false;
     nur.forEach(function(n){var s=rota[n.name]?rota[n.name][d-1]:'';if(s==='O'||s==='PL')hasOff=true});
     var fullyStaffed=(!hasOff && minCov>=covTarget);
-    var dotHtml=fullyStaffed?'<span style="position:absolute;top:1px;right:2px;font-size:1rem;color:#166534;line-height:1;cursor:pointer" onclick="SP.showAddOff('+d+')" title="Fully staffed - click to add off">*</span>':'';
+    var dotHtml=fullyStaffed?'<span style="position:absolute;top:1px;right:2px;font-size:1rem;color:var(--cov-ok-fg);line-height:1;cursor:pointer" onclick="SP.showAddOff('+d+')" title="Fully staffed - click to add off">*</span>':'';
     html+='<th class="day-header'+(dow===0?' sun':'')+'" style="'+covStyle+'position:relative;" title="Day '+d+': M='+cov.M+' A='+cov.A+' N='+cov.N+(fullyStaffed?' | Fully staffed - click * to add off':'')+'">'+dotHtml+'<span class="day-name">'+DAY_NAMES[dow]+'</span>'+d+'</th>';
   }
   html+='</tr></thead><tbody>';
@@ -886,7 +916,7 @@ function refreshSummaryAndCoverage(){
         if(s==='O'||s==='PL')hasOff=true;
       });
       var minCov=Math.min(cov.M,cov.A,cov.N);
-      var bg=(minCov>=covTarget)?'#dcfce7':(minCov>=1?'#fef3c7':'#fee2e2');
+      var bg=(minCov>=covTarget)?'var(--cov-ok)':(minCov>=1?'var(--cov-warn)':'var(--cov-danger)');
       th.style.background=bg;
       var fullyStaffed=(!hasOff&&minCov>=covTarget);
       // Rebuild/remove the asterisk span
@@ -895,7 +925,7 @@ function refreshSummaryAndCoverage(){
         if(!existingDot){
           var span=document.createElement('span');
           span.className='cov-dot';
-          span.style.cssText='position:absolute;top:1px;right:2px;font-size:1rem;color:#166534;line-height:1;cursor:pointer';
+          span.style.cssText='position:absolute;top:1px;right:2px;font-size:1rem;color:var(--cov-ok-fg);line-height:1;cursor:pointer';
           span.title='Fully staffed - click to add off';
           span.textContent='*';
           span.setAttribute('onclick','SP.showAddOff('+d+')');
@@ -1025,7 +1055,7 @@ function manualRota(){
   if(existing){
     // Confirm before clearing existing data (item 4).
     document.getElementById('alert-box').innerHTML='<h4 style="color:#d97706;margin-bottom:.5rem">Start blank manual rota?</h4>'+
-      '<div style="text-align:left;font-size:.82rem;color:#555;margin-bottom:1rem;line-height:1.6">This will <b>clear the existing rota</b> for '+MONTH_NAMES[state.currentMonth]+' '+state.currentYear+' ('+(state.currentTab==='nurses'?'Nurses':'HouseKeeping')+') and give you an empty, hand-editable grid. This cannot be undone.</div>'+
+      '<div style="text-align:left;font-size:.82rem;color:var(--text-light);margin-bottom:1rem;line-height:1.6">This will <b>clear the existing rota</b> for '+MONTH_NAMES[state.currentMonth]+' '+state.currentYear+' ('+(state.currentTab==='nurses'?'Nurses':'HouseKeeping')+') and give you an empty, hand-editable grid. This cannot be undone.</div>'+
       '<div style="display:flex;gap:.5rem;justify-content:center"><button class="btn" style="background:#dc2626;color:#fff;border-color:#dc2626" id="mm-confirm">Clear &amp; go blank</button><button class="btn" onclick="SP.closeAlert()">Cancel</button></div>';
     document.getElementById('alert-overlay').classList.add('show');
     document.getElementById('mm-confirm').onclick=function(){closeAlert();start()};
@@ -1259,7 +1289,7 @@ function applyShift(name,di,shift){
   var staff=loadStaff();var errors=validate(rota,name,di,shift,staff,state.currentTab);
   if(errors.length>0){
     closeModal();window._pending={name:name,di:di,shift:shift};
-    document.getElementById('alert-box').innerHTML='<h4 style="color:#d97706;margin-bottom:.5rem">Warning</h4><div style="text-align:left;font-size:.8rem;color:#555;margin-bottom:1rem;white-space:pre-line;line-height:1.6">'+errors.join('\n')+'</div><div style="display:flex;gap:.5rem;justify-content:center"><button class="btn" style="background:#dc2626;color:#fff;border-color:#dc2626" onclick="SP.confirmShift()">Apply Anyway</button><button class="btn" onclick="SP.closeAlert()">Cancel</button></div>';
+    document.getElementById('alert-box').innerHTML='<h4 style="color:#d97706;margin-bottom:.5rem">Warning</h4><div style="text-align:left;font-size:.8rem;color:var(--text-light);margin-bottom:1rem;white-space:pre-line;line-height:1.6">'+errors.join('\n')+'</div><div style="display:flex;gap:.5rem;justify-content:center"><button class="btn" style="background:#dc2626;color:#fff;border-color:#dc2626" onclick="SP.confirmShift()">Apply Anyway</button><button class="btn" onclick="SP.closeAlert()">Cancel</button></div>';
     document.getElementById('alert-overlay').classList.add('show');return;
   }
   pushUndo();rota[name][di]=shift;saveRota(state.currentYear,state.currentMonth,state.currentTab,rota);markEdit(name,di);hasUnsaved=true;
@@ -1669,5 +1699,5 @@ function importStaff(input){
 }
 
 // ======= PUBLIC API =======
-window.SP={version:APP_VERSION,changeMonth:changeMonth,switchTab:switchTab,generateRota:generateRota,manualRota:manualRota,showCustomDate:showCustomDate,applyCustomDate:applyCustomDate,showAddOff:showAddOff,applyAddOff:applyAddOff,editShift:editShift,applyShift:applyShift,confirmShift:confirmShift,saveManual:saveManual,undoLast:undoLast,showSetup:showSetup,toggleStaff:toggleStaff,changeRole:changeRole,removeStaff:removeStaff,addStaff:addStaff,editName:editName,editOrgName:editOrgName,setNightPref:setNightPref,addPair:addPair,removePair:removePair,closeModal:closeModal,closeAlert:closeAlert,hlName:hlName,hlShift:hlShift,hlAllNames:hlAllNames,hlAllShift:hlAllShift,clearHighlight:clearHighlight,exportPDF:exportPDF,exportStaff:exportStaff,importStaff:importStaff};
+window.SP={version:APP_VERSION,toggleTheme:toggleTheme,setTheme:setTheme,changeMonth:changeMonth,switchTab:switchTab,generateRota:generateRota,manualRota:manualRota,showCustomDate:showCustomDate,applyCustomDate:applyCustomDate,showAddOff:showAddOff,applyAddOff:applyAddOff,editShift:editShift,applyShift:applyShift,confirmShift:confirmShift,saveManual:saveManual,undoLast:undoLast,showSetup:showSetup,toggleStaff:toggleStaff,changeRole:changeRole,removeStaff:removeStaff,addStaff:addStaff,editName:editName,editOrgName:editOrgName,setNightPref:setNightPref,addPair:addPair,removePair:removePair,closeModal:closeModal,closeAlert:closeAlert,hlName:hlName,hlShift:hlShift,hlAllNames:hlAllNames,hlAllShift:hlAllShift,clearHighlight:clearHighlight,exportPDF:exportPDF,exportStaff:exportStaff,importStaff:importStaff};
 })();

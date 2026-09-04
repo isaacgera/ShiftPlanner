@@ -4,10 +4,39 @@
 // Single source of truth for the app version (semantic: major.minor.patch).
 // This is the app version — distinct from the service-worker CACHE_NAME, which is
 // just a cache-busting tag. Bump this on every release and note it in the changelog.
-var APP_VERSION='4.1.3';
+var APP_VERSION='4.2.0';
 
 // localStorage key prefix for all app data.
 var PK='sp_';
+
+// ======= THEME (light/dark) =======
+// Two-state toggle. Persisted in localStorage (PK+'theme'). On first visit (no stored
+// choice) we follow the OS preference (prefers-color-scheme). data-theme lives on <html>.
+// An inline <head> script applies the theme before paint (flash-of-light guard); this
+// block re-applies it and keeps the toggle button + theme-color meta in sync.
+function systemPrefersDark(){return window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches}
+function loadTheme(){var t=localStorage.getItem(PK+'theme');return(t==='dark'||t==='light')?t:(systemPrefersDark()?'dark':'light')}
+function applyTheme(theme){
+  var dark=theme==='dark';
+  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+  // Keep the PWA/browser chrome colour in step with the theme.
+  var meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute('content',dark?'#0f141b':'#4f46e5');
+  // Update the toggle button's icon + accessible state.
+  var btn=document.getElementById('btn-theme');
+  if(btn){
+    btn.setAttribute('aria-pressed',dark?'true':'false');
+    var label=dark?'Switch to light theme':'Switch to dark theme';
+    btn.setAttribute('aria-label',label);
+    btn.setAttribute('title',label);
+    var icon=btn.querySelector('.theme-icon');
+    if(icon)icon.textContent=dark?'☀️':'🌙';
+  }
+}
+function setTheme(theme){localStorage.setItem(PK+'theme',theme);applyTheme(theme)}
+function toggleTheme(){var next=(loadTheme()==='dark')?'light':'dark';setTheme(next);showToast(next==='dark'?'Dark theme':'Light theme')}
+// Apply the stored/preferred theme immediately at script load (syncs button + meta).
+applyTheme(loadTheme());
 
 var SHIFT_LABELS={M:'8AM-2PM',G:'10AM-6PM',A:'2PM-8PM',N:'8PM-8AM',O:'Day Off',PL:'Leave',MA:'M+A',AN:'A+N'};
 var DAY_NAMES=['S','M','T','W','T','F','S'];
@@ -822,12 +851,12 @@ function render(){
     var minCov=Math.min(cov.M,cov.A,cov.N);
     var covTarget=(tab==='housekeeping')?1:2;
     var covStyle='';
-    if(minCov>=covTarget)covStyle='background:#dcfce7;';else if(minCov>=1)covStyle='background:#fef3c7;';else covStyle='background:#fee2e2;';
+    if(minCov>=covTarget)covStyle='background:var(--cov-ok);';else if(minCov>=1)covStyle='background:var(--cov-warn);';else covStyle='background:var(--cov-danger);';
     // Check if day has no one off (fully staffed)
     var hasOff=false;
     nur.forEach(function(n){var s=rota[n.name]?rota[n.name][d-1]:'';if(s==='O'||s==='PL')hasOff=true});
     var fullyStaffed=(!hasOff && minCov>=covTarget);
-    var dotHtml=fullyStaffed?'<span style="position:absolute;top:1px;right:2px;font-size:1rem;color:#166534;line-height:1;cursor:pointer" onclick="SP.showAddOff('+d+')" title="Fully staffed - click to add off">*</span>':'';
+    var dotHtml=fullyStaffed?'<span style="position:absolute;top:1px;right:2px;font-size:1rem;color:var(--cov-ok-fg);line-height:1;cursor:pointer" onclick="SP.showAddOff('+d+')" title="Fully staffed - click to add off">*</span>':'';
     html+='<th class="day-header'+(dow===0?' sun':'')+'" style="'+covStyle+'position:relative;" title="Day '+d+': M='+cov.M+' A='+cov.A+' N='+cov.N+(fullyStaffed?' | Fully staffed - click * to add off':'')+'">'+dotHtml+'<span class="day-name">'+DAY_NAMES[dow]+'</span>'+d+'</th>';
   }
   html+='</tr></thead><tbody>';
@@ -886,7 +915,7 @@ function refreshSummaryAndCoverage(){
         if(s==='O'||s==='PL')hasOff=true;
       });
       var minCov=Math.min(cov.M,cov.A,cov.N);
-      var bg=(minCov>=covTarget)?'#dcfce7':(minCov>=1?'#fef3c7':'#fee2e2');
+      var bg=(minCov>=covTarget)?'var(--cov-ok)':(minCov>=1?'var(--cov-warn)':'var(--cov-danger)');
       th.style.background=bg;
       var fullyStaffed=(!hasOff&&minCov>=covTarget);
       // Rebuild/remove the asterisk span
@@ -895,7 +924,7 @@ function refreshSummaryAndCoverage(){
         if(!existingDot){
           var span=document.createElement('span');
           span.className='cov-dot';
-          span.style.cssText='position:absolute;top:1px;right:2px;font-size:1rem;color:#166534;line-height:1;cursor:pointer';
+          span.style.cssText='position:absolute;top:1px;right:2px;font-size:1rem;color:var(--cov-ok-fg);line-height:1;cursor:pointer';
           span.title='Fully staffed - click to add off';
           span.textContent='*';
           span.setAttribute('onclick','SP.showAddOff('+d+')');
@@ -1025,7 +1054,7 @@ function manualRota(){
   if(existing){
     // Confirm before clearing existing data (item 4).
     document.getElementById('alert-box').innerHTML='<h4 style="color:#d97706;margin-bottom:.5rem">Start blank manual rota?</h4>'+
-      '<div style="text-align:left;font-size:.82rem;color:#555;margin-bottom:1rem;line-height:1.6">This will <b>clear the existing rota</b> for '+MONTH_NAMES[state.currentMonth]+' '+state.currentYear+' ('+(state.currentTab==='nurses'?'Nurses':'HouseKeeping')+') and give you an empty, hand-editable grid. This cannot be undone.</div>'+
+      '<div style="text-align:left;font-size:.82rem;color:var(--text-light);margin-bottom:1rem;line-height:1.6">This will <b>clear the existing rota</b> for '+MONTH_NAMES[state.currentMonth]+' '+state.currentYear+' ('+(state.currentTab==='nurses'?'Nurses':'HouseKeeping')+') and give you an empty, hand-editable grid. This cannot be undone.</div>'+
       '<div style="display:flex;gap:.5rem;justify-content:center"><button class="btn" style="background:#dc2626;color:#fff;border-color:#dc2626" id="mm-confirm">Clear &amp; go blank</button><button class="btn" onclick="SP.closeAlert()">Cancel</button></div>';
     document.getElementById('alert-overlay').classList.add('show');
     document.getElementById('mm-confirm').onclick=function(){closeAlert();start()};
@@ -1259,7 +1288,7 @@ function applyShift(name,di,shift){
   var staff=loadStaff();var errors=validate(rota,name,di,shift,staff,state.currentTab);
   if(errors.length>0){
     closeModal();window._pending={name:name,di:di,shift:shift};
-    document.getElementById('alert-box').innerHTML='<h4 style="color:#d97706;margin-bottom:.5rem">Warning</h4><div style="text-align:left;font-size:.8rem;color:#555;margin-bottom:1rem;white-space:pre-line;line-height:1.6">'+errors.join('\n')+'</div><div style="display:flex;gap:.5rem;justify-content:center"><button class="btn" style="background:#dc2626;color:#fff;border-color:#dc2626" onclick="SP.confirmShift()">Apply Anyway</button><button class="btn" onclick="SP.closeAlert()">Cancel</button></div>';
+    document.getElementById('alert-box').innerHTML='<h4 style="color:#d97706;margin-bottom:.5rem">Warning</h4><div style="text-align:left;font-size:.8rem;color:var(--text-light);margin-bottom:1rem;white-space:pre-line;line-height:1.6">'+errors.join('\n')+'</div><div style="display:flex;gap:.5rem;justify-content:center"><button class="btn" style="background:#dc2626;color:#fff;border-color:#dc2626" onclick="SP.confirmShift()">Apply Anyway</button><button class="btn" onclick="SP.closeAlert()">Cancel</button></div>';
     document.getElementById('alert-overlay').classList.add('show');return;
   }
   pushUndo();rota[name][di]=shift;saveRota(state.currentYear,state.currentMonth,state.currentTab,rota);markEdit(name,di);hasUnsaved=true;
@@ -1279,7 +1308,7 @@ function showSetup(){
   var staff=loadStaff(),tab=state.currentTab,team=staff[tab]||[];
   var html='<h3>Staff Setup - '+(tab==='nurses'?'Nurses':'HouseKeeping')+'</h3><div style="margin-bottom:1rem">';
   team.forEach(function(s,i){
-    html+='<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;padding:.4rem;border-radius:6px;background:'+(s.active?'#f0fdf4':'#fef2f2')+';border:1px solid '+(s.active?'#86efac':'#fca5a5')+'">';
+    html+='<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;padding:.4rem;border-radius:6px;background:'+(s.active?'var(--staff-active-bg)':'var(--staff-inactive-bg)')+';border:1px solid '+(s.active?'var(--staff-active-border)':'var(--staff-inactive-border)')+'">';
     html+='<input type="checkbox" '+(s.active?'checked':'')+' onchange="SP.toggleStaff('+i+',this.checked)">';
     html+='<span id="staff-name-'+i+'" style="flex:1;font-weight:600;font-size:.85rem;cursor:pointer" onclick="SP.editName('+i+')" title="Click to rename">'+s.name+'</span>';
     // Night preference checkboxes (nurses: W1-W4, housekeeping: W1-W3 for 3 phases)
@@ -1298,8 +1327,8 @@ function showSetup(){
     html+='<button class="btn" style="font-size:.7rem;padding:2px 6px" onclick="SP.removeStaff('+i+')">x</button></div>';
   });
   html+='</div><div style="display:flex;gap:.4rem;margin-bottom:1.5rem"><input type="text" id="new-name" placeholder="New staff name" style="flex:1;padding:.4rem;border:1px solid var(--border);border-radius:6px;font-size:.85rem"><button class="btn btn-primary" onclick="SP.addStaff()">Add</button></div>';
-  html+='<h4 style="font-size:.85rem;color:#dc2626;margin-bottom:.3rem">Incompatible Pairs</h4><p style="font-size:.7rem;color:var(--text-light);margin-bottom:.5rem">Cannot be on same shift.</p>';
-  (staff.incompatiblePairs||[]).forEach(function(p,i){html+='<div style="font-size:.8rem;margin-bottom:.3rem"><span style="background:#fee2e2;padding:2px 6px;border-radius:4px">'+p[0]+' & '+p[1]+'</span> <button class="btn" style="font-size:.6rem;padding:1px 4px" onclick="SP.removePair('+i+')">x</button></div>'});
+  html+='<h4 style="font-size:.85rem;color:var(--danger-heading);margin-bottom:.3rem">Incompatible Pairs</h4><p style="font-size:.7rem;color:var(--text-light);margin-bottom:.5rem">Cannot be on same shift.</p>';
+  (staff.incompatiblePairs||[]).forEach(function(p,i){html+='<div style="font-size:.8rem;margin-bottom:.3rem"><span style="background:var(--pair-chip-bg);padding:2px 6px;border-radius:4px">'+p[0]+' & '+p[1]+'</span> <button class="btn" style="font-size:.6rem;padding:1px 4px" onclick="SP.removePair('+i+')">x</button></div>'});
   var names=team.filter(function(s){return s.role==='nurse'||s.role==='maid'}).map(function(s){return s.name});
   html+='<div style="display:flex;gap:.3rem;margin-top:.4rem"><select id="pa" style="font-size:.75rem"><option value="">Select</option>';
   names.forEach(function(n){html+='<option>'+n+'</option>'});
@@ -1669,5 +1698,5 @@ function importStaff(input){
 }
 
 // ======= PUBLIC API =======
-window.SP={version:APP_VERSION,changeMonth:changeMonth,switchTab:switchTab,generateRota:generateRota,manualRota:manualRota,showCustomDate:showCustomDate,applyCustomDate:applyCustomDate,showAddOff:showAddOff,applyAddOff:applyAddOff,editShift:editShift,applyShift:applyShift,confirmShift:confirmShift,saveManual:saveManual,undoLast:undoLast,showSetup:showSetup,toggleStaff:toggleStaff,changeRole:changeRole,removeStaff:removeStaff,addStaff:addStaff,editName:editName,editOrgName:editOrgName,setNightPref:setNightPref,addPair:addPair,removePair:removePair,closeModal:closeModal,closeAlert:closeAlert,hlName:hlName,hlShift:hlShift,hlAllNames:hlAllNames,hlAllShift:hlAllShift,clearHighlight:clearHighlight,exportPDF:exportPDF,exportStaff:exportStaff,importStaff:importStaff};
+window.SP={version:APP_VERSION,changeMonth:changeMonth,switchTab:switchTab,generateRota:generateRota,manualRota:manualRota,showCustomDate:showCustomDate,applyCustomDate:applyCustomDate,showAddOff:showAddOff,applyAddOff:applyAddOff,editShift:editShift,applyShift:applyShift,confirmShift:confirmShift,saveManual:saveManual,undoLast:undoLast,showSetup:showSetup,toggleStaff:toggleStaff,changeRole:changeRole,removeStaff:removeStaff,addStaff:addStaff,editName:editName,editOrgName:editOrgName,setNightPref:setNightPref,addPair:addPair,removePair:removePair,closeModal:closeModal,closeAlert:closeAlert,hlName:hlName,hlShift:hlShift,hlAllNames:hlAllNames,hlAllShift:hlAllShift,clearHighlight:clearHighlight,exportPDF:exportPDF,exportStaff:exportStaff,importStaff:importStaff,toggleTheme:toggleTheme,setTheme:setTheme};
 })();
