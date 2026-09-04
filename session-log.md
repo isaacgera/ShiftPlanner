@@ -1078,3 +1078,15 @@ Prototype started at Accessibility 95% (only `color-contrast` failing); fixed to
 - `.kiro/specs/ShiftPlanner/*` — requirements/design/tasks updated for the theme feature
 - `Ideas.md` (backlog) — row → In Progress (v4.2.0)
 - `prototypes/` — theme prototype kept for future iteration
+
+### Addendum — Deployed & verified live
+- **Pushed to `origin/main`** — commit `0f6eadc` (10 files, +534/−117), on top of v4.1.3 (`ba02d5c`).
+  Verified `HEAD` == `origin/main` == `0f6eadc` and working tree clean.
+- **Verified live on GitHub Pages** by Isaac (`https://isaacgera.github.io/ShiftPlanner/ShiftPlanner.html`).
+  Initial "not working" was the usual GitHub Pages build lag + the old v10 service worker serving
+  stale cache; resolved once Pages rebuilt and the v11 SW activated. Not a code issue.
+- **Ideas backlog row → `Built (ShiftPlanner v4.2.0)`** (flipped after live verification).
+- **Session status: complete.** All docs (session log, UserGuide, SPEC trilogy) and backlog in sync;
+  `APP_VERSION` 4.2.0 / SW cache v11 confirmed shipped.
+- Note: the deploy-command line above (`git add -A`) is the log's standard shorthand; the actual
+  commit staged the specific changed files rather than `-A`.
