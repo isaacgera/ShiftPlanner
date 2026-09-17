@@ -1090,3 +1090,59 @@ Prototype started at Accessibility 95% (only `color-contrast` failing); fixed to
   `APP_VERSION` 4.2.0 / SW cache v11 confirmed shipped.
 - Note: the deploy-command line above (`git add -A`) is the log's standard shorthand; the actual
   commit staged the specific changed files rather than `-A`.
+
+
+---
+
+## Session 17 — Sep 17, 2026
+**"Powered by Forjé" branding footer (app + docs) — docs/branding only, no version bump**
+**AI Partner:** Forjé
+
+### Goal
+Isaac asked to add a credit footer to ShiftPlanner (app + documentation), matching the
+family-wide "Powered by Forjé" branding rolled out to Idea Board the same day. Copyright
+holder for ShiftPlanner is **Suneetha K** (deliberately different from Idea Board's Isaac A
+Gera — used exactly as Isaac specified). Default mode — display/branding only, no behaviour
+change, **no version bump** (stays v4.2.0).
+
+### Credit applied
+```
+Powered by Forjé
+© 2026 Suneetha K. All rights reserved.
+```
+- **`ShiftPlanner.html` (the app)** — added a small `<footer class="app-footer no-print">` at
+  the bottom of `.app` (below the rota/modals). New CSS uses existing theme tokens
+  (`--text-light`, `--border`, `--primary-accent`) so it renders correctly in **light + dark**,
+  and it carries `.no-print` so it never appears on printed/exported PDF rotas (consistent with
+  how the header controls + coverage row are already print-excluded).
+- **`UserGuide.html`** — kept the existing "Built with care for healthcare teams everywhere."
+  tagline and added the two-line credit beneath it (bold "Powered by Forjé" + copyright, tokenised).
+- **`overview.html`** — added a matching `<footer>` (it was a stub with no footer before), styled
+  to its palette (indigo accent on the brand line).
+- Left untouched: the `prototypes/` folder (no footers there) and `LICENSE` (unchanged; MIT,
+  Copyright (c) 2026 Isaac A. Gera — the code licence is separate from the app's display credit).
+
+### Verification
+- IDE diagnostics clean on all three edited files (`ShiftPlanner.html`, `UserGuide.html`,
+  `overview.html`).
+- **Not browser-tested here** (Windows shell can't run a live server reliably). Suggested manual
+  check for Isaac: eyeball the app footer below the rota in both light + dark, and confirm it does
+  NOT show on Export PDF / print.
+- Display/branding only — `APP_VERSION` (4.2.0) and SW `CACHE_NAME` (v11) unchanged; no PWA cache
+  bump needed (no cached asset content changed materially — HTML footer only). Note: if Isaac wants
+  installed PWA users to see the app footer promptly, a future cache bump would force it, but it's
+  not required for correctness.
+
+### Deploy
+- Single remote `origin`, branch `main` (ShiftPlanner is NOT on the 3-remote pushall setup).
+  Committed the three edited files + this log; pushed via `git push origin main`.
+
+### Backlog
+- `Ideas.md` unchanged — app already `Built (ShiftPlanner v4.2.0)`; this is a branding/doc-sync,
+  not a status change.
+
+### Files Modified
+- `ShiftPlanner.html` — `.app-footer` CSS + footer markup (`.no-print`)
+- `UserGuide.html` — credit lines under the existing tagline
+- `overview.html` — new footer credit
+- `session-log.md` — this entry

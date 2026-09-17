@@ -196,6 +196,11 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
 /* Print title - hidden on screen, shown only when printing */
 .print-title{display:none}
 
+/* App footer credit — themes via tokens (light + dark), hidden on print via .no-print */
+.app-footer{margin-top:1.5rem;padding:1rem 0 .5rem;border-top:1px solid var(--border);text-align:center;color:var(--text-light);font-size:.72rem;line-height:1.6;display:flex;flex-direction:column;gap:.1rem}
+.app-footer-brand{color:var(--primary-accent);font-weight:600;letter-spacing:.2px}
+.app-footer-copy{opacity:.85}
+
 /* Print */
 @media print{
   /* Always print in LIGHT, even if the screen is in dark mode — reset every theme token
@@ -302,6 +307,11 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
 
   <div class="modal-overlay" id="modal-overlay"><div class="modal" id="modal-content"></div></div>
   <div class="alert-overlay" id="alert-overlay"><div class="alert-box" id="alert-box"></div></div>
+
+  <footer class="app-footer no-print">
+    <span class="app-footer-brand">Powered by Forjé</span>
+    <span class="app-footer-copy">&copy; 2026 Suneetha K. All rights reserved.</span>
+  </footer>
 </div>
 
 <script src="rules.js"></script>
