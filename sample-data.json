@@ -1,0 +1,35 @@
+{
+  "orgName": "Meridian Community Health Centre (SAMPLE DATA)",
+  "nurses": [
+    { "name": "AISHA", "role": "nurse", "active": true, "nightPref": [1] },
+    { "name": "BRENDA", "role": "nurse", "active": true, "nightPref": [] },
+    { "name": "CARMEN", "role": "nurse", "active": true, "nightPref": [2] },
+    { "name": "DEEPA", "role": "nurse", "active": true, "nightPref": [] },
+    { "name": "ELENA", "role": "nurse", "active": true, "nightPref": [3] },
+    { "name": "FARIDA", "role": "nurse", "active": true, "nightPref": [] },
+    { "name": "GRACE", "role": "nurse", "active": true, "nightPref": [4] },
+    { "name": "HELENA", "role": "nurse", "active": true, "nightPref": [] },
+    { "name": "INDRA", "role": "nurse", "active": true, "nightPref": [2, 4] },
+    { "name": "JOSEPHINE", "role": "nurse", "active": true, "nightPref": [] },
+    { "name": "KIRAN", "role": "g-shift", "active": true }
+  ],
+  "housekeeping": [
+    { "name": "LAKSHMI", "role": "housekeeping", "active": true, "nightPref": [1] },
+    { "name": "MERCY", "role": "housekeeping", "active": true, "nightPref": [] },
+    { "name": "NADIA", "role": "housekeeping", "active": true, "nightPref": [2] },
+    { "name": "OLIVIA", "role": "housekeeping", "active": true, "nightPref": [] },
+    { "name": "PRIYA", "role": "housekeeping", "active": true, "nightPref": [3] },
+    { "name": "QUEENIE", "role": "housekeeping", "active": true, "nightPref": [] },
+    { "name": "RASHMI", "role": "housekeeping", "active": true, "nightPref": [1] },
+    { "name": "SELINA", "role": "housekeeping", "active": true, "nightPref": [] },
+    { "name": "TARA", "role": "housekeeping", "active": true, "nightPref": [2] },
+    { "name": "USHA", "role": "housekeeping", "active": true, "nightPref": [] },
+    { "name": "VIOLET", "role": "g-shift", "active": true }
+  ],
+  "incompatiblePairs": [
+    ["AISHA", "BRENDA"],
+    ["ELENA", "GRACE"],
+    ["LAKSHMI", "MERCY"],
+    ["PRIYA", "TARA"]
+  ]
+}
