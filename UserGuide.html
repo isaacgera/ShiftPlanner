@@ -138,6 +138,17 @@ kbd{background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:.8rem;font-fa
 <div class="tip">As you type, the Shift Count table and the day coverage indicators update <b>live</b>. The <b>Total</b> column shows the running sum of all shifts entered for each person — when a row is complete it equals the number of days in the month, so it doubles as a quick "did I miss a cell?" check.</div>
 <div class="warn">Invalid entries (anything that isn't a valid shift code) flash red and are rejected. Coverage or incompatible-pair issues show a brief note but don't block you — Manual mode trusts your judgement.</div>
 
+<h3>Spreadsheet-Style Editing (select, copy, paste, fill)</h3>
+<p>Manual mode behaves like a spreadsheet, so you can fill a month quickly without typing every cell. These work on both tabs:</p>
+<ul>
+<li><b>Select a range</b> — click a cell and <b>drag</b> across the grid (in any direction) to highlight a block, or <kbd>Shift</kbd>+click a second cell. <kbd>Shift</kbd>+arrow keys extend the selection one cell at a time; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+arrow extends all the way to the edge.</li>
+<li><b>Select all</b> — <kbd>Ctrl</kbd>+<kbd>A</kbd> selects the whole grid.</li>
+<li><b>Copy / Cut / Paste</b> — <kbd>Ctrl</kbd>+<kbd>C</kbd>, <kbd>Ctrl</kbd>+<kbd>X</kbd>, <kbd>Ctrl</kbd>+<kbd>V</kbd>. This uses your system clipboard, so you can <b>copy a block to or from Excel</b> (and other apps). Pasted codes are validated the same way as typing — anything invalid is skipped.</li>
+<li><b>Clear</b> — <kbd>Del</kbd> empties the selected cells.</li>
+<li><b>Fill (drag-copy)</b> — select a cell (or block), then drag the small square handle at its bottom-right corner across the grid to copy the value(s) in any direction, just like Excel's fill handle.</li>
+</ul>
+<div class="tip">On a phone or tablet, a small <b>Copy / Cut / Paste / Clear</b> toolbar appears at the bottom of the screen whenever you have a range selected, so you don't need a keyboard. Every fill, paste, cut or clear is a single <b>Undo</b> step.</div>
+
 <h3>Night Shift Preference</h3>
 <p>In Staff Setup, each nurse/HK staff can set preferred weeks for Night shift:</p>
 <ul>

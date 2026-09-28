@@ -54,12 +54,35 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
 .rota-table td.shift-cell.editing{box-shadow:inset 0 0 0 2px var(--primary);background:var(--sel-bg)!important;color:var(--text)!important}
 .rota-table td.shift-cell.invalid-flash{animation:invalidFlash .4s ease}
 @keyframes invalidFlash{0%,100%{box-shadow:inset 0 0 0 2px var(--primary)}50%{box-shadow:inset 0 0 0 2px #dc2626;background:var(--cov-danger)!important}}
+/* Multi-cell selection (manual mode): rectangular range via shift-click or click-drag. */
+.rota-table.manual-mode td.shift-cell.sel-cell{box-shadow:inset 0 0 0 1px var(--primary);background:var(--sel-bg)!important}
+/* The selection's active/anchor cell gets a stronger ring + hosts the fill handle. */
+.rota-table.manual-mode td.shift-cell.sel-active{box-shadow:inset 0 0 0 2px var(--primary);position:relative}
+/* While drag-selecting or fill-dragging, suppress the per-cell hover zoom so it doesn't jitter. */
+.rota-table.manual-mode.selecting td.shift-cell:hover,.rota-table.manual-mode.filling td.shift-cell:hover{transform:none;box-shadow:inset 0 0 0 1px var(--primary)}
+/* Excel-style fill handle — small square overlaid at the active cell's bottom-right corner.
+   Rendered inside .rota-container (position:relative) and placed via inline left/top so it
+   isn't a child of the contenteditable cell (which would break it on focus). */
+.fill-handle{position:absolute;width:9px;height:9px;background:var(--primary);border:1px solid var(--surface);border-radius:1px;cursor:crosshair;z-index:6;box-shadow:0 0 0 1px var(--primary)}
+.rota-table.manual-mode.selecting,.rota-table.manual-mode.filling{-webkit-user-select:none;user-select:none}
+/* Floating selection toolbar (touch-friendly Copy/Cut/Paste/Clear for the active range). */
+.sel-toolbar{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);z-index:900;display:none;gap:.4rem;padding:.5rem .6rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);align-items:center}
+.sel-toolbar.show{display:flex}
+.sel-toolbar .sel-count{font-size:.72rem;color:var(--text-light);margin-right:.2rem}
+.sel-toolbar button{padding:.4rem .7rem;font-size:.8rem;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;transition:all .15s}
+.sel-toolbar button:hover{border-color:var(--primary);color:var(--primary-accent)}
+.sel-toolbar button.tb-clear{color:var(--text-light)}
+/* While actively dragging a selection or fill, the floating toolbar must not intercept
+   pointer hit-testing (elementFromPoint) — otherwise dragging the pointer over it freezes
+   cell tracking. Buttons remain clickable when not dragging. */
+body:has(.rota-table.manual-mode.selecting) .sel-toolbar,
+body:has(.rota-table.manual-mode.filling) .sel-toolbar{pointer-events:none}
 /* Manual mode hint bar */
 .manual-hint{display:none;background:var(--hint-bg);border:1px solid var(--hint-border);color:var(--hint-fg);font-size:.78rem;padding:.4rem .8rem;border-radius:6px;margin-bottom:.8rem}
 .manual-hint.show{display:block}
 
 /* Rota Grid */
-.rota-container{overflow-x:auto;margin-bottom:1.2rem;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.rota-container{position:relative;overflow-x:auto;margin-bottom:1.2rem;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 2px 8px rgba(0,0,0,.04)}
 .rota-table{border-collapse:collapse;width:100%;min-width:860px;font-size:.75rem}
 .rota-table th,.rota-table td{border:1px solid var(--border);padding:.2rem .3rem;text-align:center;min-width:28px}
 .rota-table th{background:var(--surface-alt);font-weight:600;position:sticky;top:0;z-index:2}
@@ -196,6 +219,15 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
 /* Print title - hidden on screen, shown only when printing */
 .print-title{display:none}
 
+/* Mobile PDF-export fix: mobile browsers (Android Chrome / iOS Safari) don't reliably apply
+   @media print overrides — they capture the current on-screen viewport, so the horizontally
+   scrollable .rota-container stays clipped and only the visible slice lands in the PDF.
+   exportPDF() adds .printing to <body> just before window.print() so the un-clipping happens
+   in the real (screen) layout too, independent of print-media support. Belt-and-braces with
+   the @media print block below (which keeps desktop working). */
+body.printing .rota-container{overflow:visible!important}
+body.printing .rota-table{min-width:0!important;width:100%!important}
+
 /* App footer credit — themes via tokens (light + dark), hidden on print via .no-print */
 .app-footer{margin-top:1.5rem;padding:1rem 0 .5rem;border-top:1px solid var(--border);text-align:center;color:var(--text-light);font-size:.72rem;line-height:1.6;display:flex;flex-direction:column;gap:.1rem}
 .app-footer-brand{color:var(--primary-accent);font-weight:600;letter-spacing:.2px}
@@ -301,9 +333,17 @@ select{padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px;fon
     </div>
   </header>
 
-  <div class="manual-hint no-print" id="manual-hint">Manual mode: click a cell and type a shift code (M, G, A, N, O, PL, MA, AN). Press Enter, Tab or the arrow keys to move. Invalid entries are rejected.</div>
+  <div class="manual-hint no-print" id="manual-hint">Manual mode (spreadsheet-style): click a cell to select it; double-click or just start typing to edit (codes: M, G, A, N, O, PL, MA, AN); Enter/Tab/arrows move. Drag to select a range; Shift+click or Shift+Arrow extends; Ctrl+Shift+Arrow extends to the edge; Ctrl+A selects all; Ctrl+C/X/V copy/cut/paste (works with Excel); Del clears; drag the corner handle to fill in any direction.</div>
 
   <main id="rota-content"></main>
+
+  <div class="sel-toolbar no-print" id="sel-toolbar" role="toolbar" aria-label="Selection actions">
+    <span class="sel-count" id="sel-count"></span>
+    <button type="button" onclick="SP.copySel()" title="Copy selection (Ctrl/Cmd+C)">Copy</button>
+    <button type="button" onclick="SP.cutSel()" title="Cut selection (Ctrl/Cmd+X)">Cut</button>
+    <button type="button" onclick="SP.pasteSel()" title="Paste (Ctrl/Cmd+V)">Paste</button>
+    <button type="button" class="tb-clear" onclick="SP.clearSel()" title="Clear selection (Esc)">Clear</button>
+  </div>
 
   <div class="modal-overlay" id="modal-overlay"><div class="modal" id="modal-content"></div></div>
   <div class="alert-overlay" id="alert-overlay"><div class="alert-box" id="alert-box"></div></div>

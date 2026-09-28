@@ -4,7 +4,7 @@
 // Single source of truth for the app version (semantic: major.minor.patch).
 // This is the app version — distinct from the service-worker CACHE_NAME, which is
 // just a cache-busting tag. Bump this on every release and note it in the changelog.
-var APP_VERSION='4.2.0';
+var APP_VERSION='4.3.0';
 
 // localStorage key prefix for all app data.
 var PK='sp_';
@@ -12,8 +12,6 @@ var PK='sp_';
 // ======= THEME (light/dark) =======
 // Two-state toggle. Persisted in localStorage (PK+'theme'). On first visit (no stored
 // choice) we follow the OS preference (prefers-color-scheme). data-theme lives on <html>.
-// An inline <head> script applies the theme before paint (flash-of-light guard); this
-// block re-applies it and keeps the toggle button + theme-color meta in sync.
 function systemPrefersDark(){return window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches}
 function loadTheme(){var t=localStorage.getItem(PK+'theme');return(t==='dark'||t==='light')?t:(systemPrefersDark()?'dark':'light')}
 function applyTheme(theme){
@@ -35,7 +33,7 @@ function applyTheme(theme){
 }
 function setTheme(theme){localStorage.setItem(PK+'theme',theme);applyTheme(theme)}
 function toggleTheme(){var next=(loadTheme()==='dark')?'light':'dark';setTheme(next);showToast(next==='dark'?'Dark theme':'Light theme')}
-// Apply the stored/preferred theme immediately at script load (syncs button + meta).
+// Apply the stored/preferred theme immediately at script load (before render) to avoid a flash.
 applyTheme(loadTheme());
 
 var SHIFT_LABELS={M:'8AM-2PM',G:'10AM-6PM',A:'2PM-8PM',N:'8PM-8AM',O:'Day Off',PL:'Leave',MA:'M+A',AN:'A+N'};
@@ -888,7 +886,10 @@ function render(){
   // Guarded because the very first render() runs before hlState is assigned.
   if(typeof hlState!=='undefined'&&(hlState.names.length||hlState.shifts.length))applyHighlight();
   // If in manual mode, wire up the spreadsheet-style editable cells after (re)render.
+  // Otherwise defensively clear any lingering range selection + its toolbar (e.g. after
+  // Generate / switchTab leaves manual mode).
   if(typeof manualMode!=='undefined'&&manualMode)wireManualCells();
+  else if(typeof clearSelection==='function')clearSelection();
 }
 
 // Update the Shift Count summary + day-header coverage/asterisk IN PLACE, without a full
@@ -1087,6 +1088,184 @@ function manualNeighbour(name,di,dir){
   return null;
 }
 
+// Compute the fill target rectangle from the source (fillFrom) and the current pointer cell.
+// Excel-style: fill runs along ONE dominant axis per drag — whichever direction the pointer
+// moved furthest from the source — and supports all four directions (up/down/left/right).
+// The source range is always included; the rect extends past it on the chosen side.
+function fillTargetRect(co){
+  var s=fillFrom;
+  // Full 2D fill: the target rectangle spans from the source block out to the pointer cell in
+  // BOTH axes at once, so a diagonal drag fills a block (not just a single row/column). The
+  // source range is always included; the rect grows on whichever side(s) the pointer passed.
+  var r={
+    r0:Math.min(s.r0,co.ni),
+    r1:Math.max(s.r1,co.ni),
+    c0:Math.min(s.c0,co.di),
+    c1:Math.max(s.c1,co.di)
+  };
+  // Clamp to grid.
+  r.r0=Math.max(0,r.r0);r.r1=Math.min(manualNav.names.length-1,r.r1);
+  r.c0=Math.max(0,r.c0);r.c1=Math.min(manualNav.days-1,r.c1);
+  return r;
+}
+
+// During a fill-handle drag, show the target rect as a PREVIEW highlight only. This must NOT
+// touch selState.anchor/focus (the fill source), otherwise the direction/source is corrupted
+// mid-drag. We remember the pointer cell in fillTarget for applyFill to use on mouseup.
+function paintFillPreview(co){
+  if(!fillFrom)return;
+  fillTarget=co;
+  var r=fillTargetRect(co);
+  // Paint the preview rect directly (independent of the selection paint path).
+  var table=document.querySelector('.rota-table');if(!table)return;
+  table.querySelectorAll('td.shift-cell.sel-cell').forEach(function(c){c.classList.remove('sel-cell','sel-active')});
+  removeFillHandle();
+  for(var ni=r.r0;ni<=r.r1;ni++){
+    for(var di=r.c0;di<=r.c1;di++){
+      var cell=getCellByIndex(ni,di);if(cell)cell.classList.add('sel-cell');
+    }
+  }
+}
+
+// Wire document-level handlers ONCE (mouseup to end drags, keyboard shortcuts, native paste).
+var selHandlersWired=false;
+function wireSelectionHandlers(table){
+  // Per-render: reset transient drag flags and clear any stale selection from the old DOM.
+  selDragging=false;fillDragging=false;fillFrom=null;
+  clearSelection();
+  // Reposition the fill-handle overlay when the rota scrolls horizontally (it's an overlay
+  // in the container, so it must follow the active cell). Re-run paintSelection to replace it.
+  if(!table.__fillScrollWired){
+    table.__fillScrollWired=true;
+    var cont=document.querySelector('.rota-container');
+    if(cont)cont.addEventListener('scroll',function(){if(selState.active)paintSelection()});
+  }
+
+  if(selHandlersWired)return;
+  selHandlersWired=true;
+
+  document.addEventListener('mouseup',function(){
+    if(fillDragging){
+      fillDragging=false;
+      var t=document.querySelector('.rota-table');if(t)t.classList.remove('filling');
+      // Use the pointer cell captured during the drag (fillTarget), NOT selState — so the
+      // fill direction is whatever direction the pointer actually moved.
+      if(fillTarget)applyFill(fillTarget);
+      fillFrom=null;fillTarget=null;
+    }
+    if(selDragging){
+      var wasClick=!selDragMoved;              // mouse never moved to another cell → a plain click
+      var clickAnchor=selDragAnchor;
+      selDragging=false;selDragMoved=false;selDragAnchor=null;
+      var t2=document.querySelector('.rota-table');if(t2)t2.classList.remove('selecting');
+      // Single click (no drag) → enter edit mode immediately so the user can just start
+      // typing, matching the original single-click-to-type behaviour. A drag selects a
+      // range instead and does NOT start editing.
+      if(wasClick&&clickAnchor){
+        var name=manualNav.names[clickAnchor.ni];
+        var cell=getCellByIndex(clickAnchor.ni,clickAnchor.di);
+        if(name!=null&&cell)beginEdit(name,clickAnchor.di,cell);
+      }
+    }
+  });
+
+  // Document-level drag tracking via elementFromPoint. This is the reliable way to get a true
+  // 2D rectangle for diagonal drags (per-cell mouseenter is suppressed by the native
+  // contenteditable text-selection drag). Handles both range-select and fill drags.
+  document.addEventListener('mousemove',function(e){
+    if(!selDragging&&!fillDragging)return;
+    var co=cellAtPoint(e.clientX,e.clientY);
+    if(!co)return;
+    if(selDragging){
+      e.preventDefault();
+      // Only treat it as a real drag once the pointer is over a DIFFERENT cell than the
+      // anchor. This is what lets a plain click (down+up on one cell) fall through to edit
+      // mode, while an actual drag builds the 2D rectangle.
+      if(co.ni!==selDragAnchor.ni||co.di!==selDragAnchor.di)selDragMoved=true;
+      setSelection(selDragAnchor,co);
+    } else if(fillDragging){
+      e.preventDefault();
+      paintFillPreview(co);
+    }
+  });
+
+  // Keyboard (Excel-style). Copy/Cut/Paste go through the native clipboard events below.
+  // Here we handle: Ctrl+A (select all), Del/Backspace (clear range), Escape (clear),
+  // Shift+Arrow (extend by one), Ctrl+Shift+Arrow (extend to grid edge).
+  document.addEventListener('keydown',function(e){
+    if(!manualMode)return;
+    var mod=e.ctrlKey||e.metaKey;
+
+    // Ctrl/Cmd+A → select the whole grid. When mid-edit in a single cell, first press still
+    // selects the grid (Excel-like), overriding the browser's select-cell-text default.
+    if(mod&&!e.shiftKey&&(e.key==='a'||e.key==='A')){
+      if(manualNav.names.length&&manualNav.days){
+        e.preventDefault();
+        blurActiveCell();
+        setSelection({ni:0,di:0},{ni:manualNav.names.length-1,di:manualNav.days-1});
+      }
+      return;
+    }
+
+    // Shift+Arrow / Ctrl+Shift+Arrow → extend the selection. Works from a single focused cell
+    // too (that cell is a 1x1 selection), matching Excel.
+    if(e.shiftKey&&isArrowKey(e.key)&&selState.active){
+      e.preventDefault();
+      extendSelection(e.key,mod); // mod=true → jump to grid edge
+      return;
+    }
+
+    // Del/Backspace → clear the selected range (one undo step). Only when a real range is
+    // active; for a single editing cell we let the browser delete a character normally.
+    if((e.key==='Delete'||e.key==='Backspace')&&selState.active&&selIsMulti()){
+      e.preventDefault();
+      clearRange();
+      return;
+    }
+
+    if(e.key==='Escape'&&selState.active&&selIsMulti()){clearSelection()}
+  });
+
+  // Native paste: the reliable cross-browser way to read the OS clipboard (no permission prompt).
+  document.addEventListener('paste',function(e){
+    if(!manualMode||!selState.active)return;
+    var text=(e.clipboardData||window.clipboardData).getData('text');
+    if(text==null)return;
+    // We own paste whenever a selection is active in manual mode (single cell or range),
+    // writing the clipboard value(s) via the validated range path — Excel-style. This also
+    // fixes single-cell paste, which previously fell through to raw contenteditable.
+    e.preventDefault();
+    var grid=parseClipboardGrid(text);
+    if(!grid.length)return;
+    var r=selRect();
+    var res=writeRangeToRota(r.r0,r.c0,grid);
+    var r1=Math.min(manualNav.names.length-1,r.r0+grid.length-1);
+    var maxCols=grid.reduce(function(m,row){return Math.max(m,row.length)},0);
+    var c1=Math.min(manualNav.days-1,r.c0+maxCols-1);
+    setSelection({ni:r.r0,di:r.c0},{ni:r1,di:c1});
+    var msg='Pasted '+res.written+' cell'+(res.written===1?'':'s');
+    if(res.invalid)msg+=' — '+res.invalid+' invalid skipped';
+    if(res.clipped)msg+=' — '+res.clipped+' clipped at edge';
+    showToast(msg);
+  });
+
+  // Native copy/cut: put the selection (as TSV) on the OS clipboard. Works for ANY active
+  // selection including a single cell — Excel-style, Ctrl+C copies the whole cell value, not
+  // just the caret text (which was unreliable / empty for blank cells).
+  document.addEventListener('copy',function(e){
+    if(!manualMode||!selState.active)return;
+    e.preventDefault();e.clipboardData.setData('text/plain',selectionToTSV());
+    showToast('Copied '+countCells(selRect())+' cell'+(countCells(selRect())===1?'':'s'));
+  });
+  document.addEventListener('cut',function(e){
+    if(!manualMode||!selState.active)return;
+    e.preventDefault();e.clipboardData.setData('text/plain',selectionToTSV());
+    var r=selRect();var grid=[];for(var ni=r.r0;ni<=r.r1;ni++){var rowArr=[];for(var di=r.c0;di<=r.c1;di++)rowArr.push('');grid.push(rowArr)}
+    writeRangeToRota(r.r0,r.c0,grid);
+    showToast('Cut '+countCells(r)+' cell'+(countCells(r)===1?'':'s'));
+  });
+}
+
 // After each render in manual mode, make shift cells directly editable (no popup/dropdown).
 function wireManualCells(){
   var table=document.querySelector('.rota-table');if(!table)return;
@@ -1097,45 +1276,104 @@ function wireManualCells(){
   // still auto-prefilled with G/O as a starting point, but can be overridden by hand).
   manualNav.names=team.map(function(s){return s.name});
   manualNav.days=getDays(state.currentYear,state.currentMonth);
+  wireSelectionHandlers(table);
   var rows=table.querySelectorAll('tbody tr');
   rows.forEach(function(row){
     var nurse=row.getAttribute('data-nurse');
     row.querySelectorAll('td.shift-cell').forEach(function(cell){
       var di=parseInt(cell.getAttribute('data-day'),10);
-      cell.setAttribute('contenteditable','true');
+      // EDIT-ON-DEMAND model: cells are NOT contenteditable at rest. This is the crucial
+      // change — permanently-editable cells trigger the browser's native text-selection drag,
+      // which fought the grid selection (the up/left vs down/right asymmetry). Now mouse
+      // dragging is pure grid selection with zero native interference; a cell only becomes
+      // editable when you double-click it or start typing on it.
+      cell.setAttribute('contenteditable','false');
       cell.removeAttribute('onclick'); // no popup in manual mode
-      // Show empty cells truly blank (not the '-' placeholder) for a clean spreadsheet feel.
       if((cell.getAttribute('data-shift')||'-')==='-')cell.textContent='';
-      cell.addEventListener('focus',function(){cell.classList.add('editing');selectCellText(cell)});
-      cell.addEventListener('keydown',function(e){
-        var dir=null;
-        if(e.key==='Enter'||e.key==='Tab')dir=e.shiftKey?'left':'right';
-        else if(e.key==='ArrowRight')dir='right';
-        else if(e.key==='ArrowLeft')dir='left';
-        else if(e.key==='ArrowUp')dir='up';
-        else if(e.key==='ArrowDown')dir='down';
-        else if(e.key==='Escape'){e.preventDefault();cell.textContent=(cell.getAttribute('data-shift')||'');cell.blur();return}
-        else return; // normal typing
 
-        e.preventDefault();
-        var nav=manualNeighbour(nurse,di,dir);
-        if(nav){
-          cell.blur();                 // commit current cell
-          focusManualCell(nav.name,nav.di);
+      // mousedown: start selection (single cell or drag anchor), or shift-click extend.
+      cell.addEventListener('mousedown',function(e){
+        if(e.target&&e.target.getAttribute&&e.target.getAttribute('data-fill-handle'))return; // fill handle owns this
+        if(cell.getAttribute('contenteditable')==='true')return; // already editing this cell — let caret work
+        e.preventDefault(); // no native focus/text-selection — we own the interaction
+        var co=cellCoords(cell);if(!co)return;
+        if(e.shiftKey){
+          var anchor=selState.anchor||co;
+          setSelection(anchor,co);
         } else {
-          // At a grid edge: commit + re-focus this cell so keyboard nav keeps working
-          // when the user continues (no dead state, addresses point 1a).
-          commitManualCell(nurse,di,cell);
-          selectCellText(cell);
+          selDragging=true;selDragMoved=false;selDragAnchor=co;
+          setSelection(co,co);
+          table.classList.add('selecting');
         }
       });
-      cell.addEventListener('blur',function(){cell.classList.remove('editing');commitManualCell(nurse,di,cell)});
+
+      // Double-click enters edit mode for this cell.
+      cell.addEventListener('dblclick',function(e){e.preventDefault();beginEdit(nurse,di,cell)});
+
+      // Keydown while a cell is the active selection (not yet editing): Enter/F2 edit;
+      // typing a character starts editing with that character; plain arrows/Tab navigate.
+      // (Ctrl+A, Del, Shift+Arrow, Ctrl+Shift+Arrow are handled at document level.)
+      cell.addEventListener('keydown',function(e){
+        var editing=cell.getAttribute('contenteditable')==='true';
+        if(!editing){
+          // These are owned by the document-level Excel shortcuts.
+          if((e.shiftKey&&isArrowKey(e.key))||((e.ctrlKey||e.metaKey)&&(e.key==='a'||e.key==='A'))||e.key==='Delete'||e.key==='Backspace')return;
+          if(e.key==='Enter'||e.key==='F2'){e.preventDefault();beginEdit(nurse,di,cell);return}
+          if(e.key==='Tab'){e.preventDefault();var nb=manualNeighbour(nurse,di,e.shiftKey?'left':'right');if(nb)focusCellSel(nb.name,nb.di);return}
+          if(isArrowKey(e.key)){
+            e.preventDefault();
+            var dmap={ArrowRight:'right',ArrowLeft:'left',ArrowUp:'up',ArrowDown:'down'};
+            var nv=manualNeighbour(nurse,di,dmap[e.key]);if(nv)focusCellSel(nv.name,nv.di);
+            return;
+          }
+          // A printable character → start editing with it.
+          if(e.key&&e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
+            e.preventDefault();beginEdit(nurse,di,cell,e.key);
+          }
+          return;
+        }
+        // --- editing mode ---
+        var dir=null;
+        if(e.key==='Enter'||e.key==='Tab')dir=e.shiftKey?'left':'right';
+        else if(e.key==='Escape'){e.preventDefault();cell.textContent=(cell.getAttribute('data-shift')||'');endEdit(cell);focusCellSel(nurse,di);return}
+        else return; // let the character be typed
+        e.preventDefault();
+        endEdit(cell); // commit
+        var nav=manualNeighbour(nurse,di,dir);
+        if(nav)focusCellSel(nav.name,nav.di); else focusCellSel(nurse,di);
+      });
+
+      cell.addEventListener('blur',function(){if(cell.getAttribute('contenteditable')==='true')endEdit(cell)});
     });
   });
 }
 
-function selectCellText(cell){
-  try{var r=document.createRange();r.selectNodeContents(cell);var sel=window.getSelection();sel.removeAllRanges();sel.addRange(r)}catch(e){}
+// Make a cell the active selection AND give it keyboard focus (without making it editable),
+// so arrow-key navigation and typing-to-edit work. Used for keyboard nav between cells.
+function focusCellSel(name,di){
+  var ni=manualNav.names.indexOf(name);if(ni<0)return;
+  setSelection({ni:ni,di:di},{ni:ni,di:di});
+  var cell=getCellByIndex(ni,di);
+  if(cell){cell.setAttribute('tabindex','-1');cell.focus({preventScroll:false})}
+}
+
+// Enter edit mode on a cell: make it editable, focus it, optionally seed a first character.
+function beginEdit(name,di,cell,seedChar){
+  cell.setAttribute('contenteditable','true');
+  cell.classList.add('editing');
+  if(seedChar!=null)cell.textContent=seedChar;
+  cell.focus();
+  // Place caret at end (or select all so typing replaces).
+  try{var r=document.createRange();r.selectNodeContents(cell);if(seedChar==null){var sel=window.getSelection();sel.removeAllRanges();sel.addRange(r)}else{r.collapse(false);var s2=window.getSelection();s2.removeAllRanges();s2.addRange(r)}}catch(e){}
+}
+
+// Leave edit mode: commit the value and turn contenteditable back off.
+function endEdit(cell){
+  var nurse=cell.getAttribute('data-nurse');
+  var di=parseInt(cell.getAttribute('data-day'),10);
+  cell.classList.remove('editing');
+  commitManualCell(nurse,di,cell);
+  cell.setAttribute('contenteditable','false');
 }
 
 // Normalise + validate a typed value, write it to the rota, recolor the cell,
@@ -1184,6 +1422,335 @@ function paintCell(cell,shift){
   cell.setAttribute('data-shift',shift||'-');
   if(!shift&&typeof manualMode!=='undefined'&&manualMode){cell.textContent=''}
   else{cell.textContent=shift||'-'}
+}
+
+/* =======================================================================
+   MANUAL MODE — RANGE SELECTION + CLIPBOARD (OS) + EXCEL-STYLE FILL
+   -----------------------------------------------------------------------
+   Coordinates use (ni, di): ni = row index into manualNav.names, di = day (col) index.
+   Selection is a rectangle defined by an anchor + focus cell. All three features
+   (multi-select, copy/cut/paste, fill) live here and only operate in manual mode.
+   ======================================================================= */
+var selState={active:false,anchor:null,focus:null}; // anchor/focus = {ni,di}
+var selDragging=false;   // true while click-dragging a selection
+var selDragMoved=false;  // true once the pointer has moved to another cell during a drag
+var selDragAnchor=null;  // {ni,di} anchor cell recorded at drag start
+var fillDragging=false;  // true while dragging the fill handle
+var fillFrom=null;       // selection rect captured at fill-drag start (immutable source)
+var fillTarget=null;     // pointer cell {ni,di} during a fill drag (NOT selState)
+
+// --- coordinate helpers ---
+function cellCoords(cell){
+  var name=cell.getAttribute('data-nurse');
+  var ni=manualNav.names.indexOf(name);
+  var di=parseInt(cell.getAttribute('data-day'),10);
+  return (ni<0||isNaN(di))?null:{ni:ni,di:di};
+}
+function getCellByIndex(ni,di){
+  var name=manualNav.names[ni];if(name==null)return null;
+  var table=document.querySelector('.rota-table');if(!table)return null;
+  var row=table.querySelector('tr[data-nurse="'+cssEsc(name)+'"]');if(!row)return null;
+  return row.querySelector('td.shift-cell[data-day="'+di+'"]');
+}
+function cssEsc(s){return String(s).replace(/"/g,'\\"')}
+// Find the shift-cell under a viewport point and return its {ni,di} — used for robust
+// drag tracking (works for diagonal drags where per-cell mouseenter is unreliable).
+function cellAtPoint(x,y){
+  // Use elementsFromPoint (plural) and find the first shift-cell in the stack, so overlay
+  // elements above the grid (selection toolbar, fill handle, debug box) don't block tracking.
+  var list=document.elementsFromPoint?document.elementsFromPoint(x,y):[document.elementFromPoint(x,y)];
+  for(var i=0;i<list.length;i++){
+    var el=list[i];
+    while(el&&el!==document.body){
+      if(el.classList&&el.classList.contains('shift-cell'))return cellCoords(el);
+      el=el.parentElement;
+    }
+  }
+  return null;
+}
+
+// Normalise anchor+focus into an inclusive rect {r0,r1,c0,c1}.
+function selRect(){
+  if(!selState.anchor||!selState.focus)return null;
+  var a=selState.anchor,f=selState.focus;
+  return {r0:Math.min(a.ni,f.ni),r1:Math.max(a.ni,f.ni),c0:Math.min(a.di,f.di),c1:Math.max(a.di,f.di)};
+}
+function selIsMulti(){var r=selRect();return r&&(r.r0!==r.r1||r.c0!==r.c1)}
+
+// --- selection state + highlight ---
+function setSelection(anchor,focus){
+  selState.active=true;selState.anchor=anchor;selState.focus=focus||anchor;
+  paintSelection();
+}
+function clearSelection(){
+  selState.active=false;selState.anchor=null;selState.focus=null;
+  updateSelToolbar();
+  var table=document.querySelector('.rota-table');if(!table)return;
+  table.querySelectorAll('td.shift-cell.sel-cell').forEach(function(c){c.classList.remove('sel-cell','sel-active')});
+  removeFillHandle();
+}
+// Show the floating toolbar only when a multi-cell range is active; keep the count fresh.
+function updateSelToolbar(){
+  var tb=document.getElementById('sel-toolbar');if(!tb)return;
+  var show=manualMode&&selState.active&&selIsMulti();
+  tb.classList.toggle('show',!!show);
+  if(show){var c=document.getElementById('sel-count');if(c){var r=selRect();c.textContent=countCells(r)+' cells'}}
+}
+// Repaint selection classes from scratch (safe to call after paintCell wiped classes).
+function paintSelection(){
+  var table=document.querySelector('.rota-table');if(!table)return;
+  table.querySelectorAll('td.shift-cell.sel-cell').forEach(function(c){c.classList.remove('sel-cell','sel-active')});
+  removeFillHandle();
+  var r=selRect();if(!r||!selState.active)return;
+  // Paint the range highlight only for a genuine multi-cell selection; a 1x1 (plain click)
+  // stays visually clean so it reads as a normal edit target, not a "selection". The fill
+  // handle below is still added for a 1x1 (Excel allows drag-fill from a single cell).
+  if(selIsMulti()){
+    for(var ni=r.r0;ni<=r.r1;ni++){
+      for(var di=r.c0;di<=r.c1;di++){
+        var cell=getCellByIndex(ni,di);if(cell)cell.classList.add('sel-cell');
+      }
+    }
+  }
+  // Active cell = the focus corner. Show the fill handle here for ANY selection (including a
+  // 1x1 from a plain click), matching Excel where you can drag-fill from a single cell.
+  // The handle is contenteditable=false and absolutely positioned in the corner, so it
+  // doesn't disrupt typing. For a 1x1 we add the handle without the heavier 'sel-active'
+  // ring so a plain click still reads as a normal edit target.
+  var act=getCellByIndex(selState.focus.ni,selState.focus.di);
+  if(act){
+    if(selIsMulti())act.classList.add('sel-active');
+    addFillHandle(act);
+  }
+  updateSelToolbar();
+}
+
+// --- fill handle (Excel-style) ---
+// The handle is rendered as an OVERLAY in the scroll container (not as a child of the
+// contenteditable cell) so it can't be swallowed by the caret/text selection on focus and
+// stays put while typing. It's positioned at the active cell's bottom-right corner.
+function addFillHandle(cell){
+  removeFillHandle();
+  var container=document.querySelector('.rota-container');if(!container||!cell)return;
+  var h=document.createElement('div');
+  h.className='fill-handle';h.setAttribute('data-fill-handle','1');
+  // Position relative to the container, accounting for the container's own scroll offset.
+  var cRect=container.getBoundingClientRect();
+  var tRect=cell.getBoundingClientRect();
+  var left=tRect.right-cRect.left+container.scrollLeft-4;
+  var top=tRect.bottom-cRect.top+container.scrollTop-4;
+  h.style.left=left+'px';h.style.top=top+'px';
+  h.addEventListener('mousedown',function(e){
+    e.preventDefault();e.stopPropagation();
+    fillDragging=true;fillFrom=selRect();fillTarget=null;
+    var t=document.querySelector('.rota-table');if(t)t.classList.add('filling');
+  });
+  container.appendChild(h);
+}
+function removeFillHandle(){
+  var h=document.querySelector('.rota-container .fill-handle');
+  if(h&&h.parentNode)h.parentNode.removeChild(h);
+}
+
+// --- shared range writer: validate + write a block with ONE undo step ---
+// grid: 2D array [rowsInRect][colsInRect] of shift strings (already upper-cased or '').
+// r0,c0: top-left target coords. Returns {written, invalid, clipped}.
+function writeRangeToRota(r0,c0,grid){
+  var rota=loadRota(state.currentYear,state.currentMonth,state.currentTab);
+  if(!rota)return {written:0,invalid:0,clipped:0};
+  var days=manualNav.days,names=manualNav.names;
+  var written=0,invalid=0,clipped=0,changed=false;
+  var snapshotTaken=false;
+  for(var i=0;i<grid.length;i++){
+    var ni=r0+i;
+    if(ni>=names.length){clipped++;continue}
+    var name=names[ni];if(!rota[name]){clipped++;continue}
+    for(var j=0;j<grid[i].length;j++){
+      var di=c0+j;
+      if(di>=days){clipped++;continue}
+      var val=(grid[i][j]||'').trim().toUpperCase();
+      if(val==='-')val='';
+      if(val!==''&&VALID_SHIFTS.indexOf(val)===-1){invalid++;continue} // skip invalid, keep going
+      var prev=rota[name][di]||'';
+      if(val===prev)continue;
+      if(!snapshotTaken){pushUndo();snapshotTaken=true} // single undo step for the whole block
+      rota[name][di]=val;markEdit(name,di);changed=true;written++;
+    }
+  }
+  if(changed){
+    saveRota(state.currentYear,state.currentMonth,state.currentTab,rota);
+    hasUnsaved=true;
+    repaintFromRota(rota);
+    updateButtons();
+    refreshSummaryAndCoverage();
+  }
+  return {written:written,invalid:invalid,clipped:clipped};
+}
+// Repaint every manual cell from the rota data (used after range writes), then re-apply selection.
+function repaintFromRota(rota){
+  var table=document.querySelector('.rota-table');if(!table)return;
+  manualNav.names.forEach(function(name){
+    if(!rota[name])return;
+    var row=table.querySelector('tr[data-nurse="'+cssEsc(name)+'"]');if(!row)return;
+    row.querySelectorAll('td.shift-cell').forEach(function(cell){
+      var di=parseInt(cell.getAttribute('data-day'),10);
+      paintCell(cell,rota[name][di]||'');
+    });
+  });
+  paintSelection();
+}
+
+// --- build TSV from current selection (rows = staff, cols = days) ---
+function selectionToTSV(){
+  var r=selRect();if(!r)return '';
+  var rota=loadRota(state.currentYear,state.currentMonth,state.currentTab);if(!rota)return '';
+  var lines=[];
+  for(var ni=r.r0;ni<=r.r1;ni++){
+    var name=manualNav.names[ni];var cells=[];
+    for(var di=r.c0;di<=r.c1;di++){
+      var v=(rota[name]&&rota[name][di])?rota[name][di]:'';
+      cells.push(v==='-'?'':v);
+    }
+    lines.push(cells.join('\t'));
+  }
+  return lines.join('\n');
+}
+// Parse TSV/CSV text into a 2D grid of upper-cased codes.
+function parseClipboardGrid(text){
+  var rows=String(text).replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  // Drop a single trailing empty line (common when copying from spreadsheets).
+  if(rows.length>1&&rows[rows.length-1]==='')rows.pop();
+  return rows.map(function(line){
+    var cells=line.indexOf('\t')>=0?line.split('\t'):line.split(',');
+    return cells.map(function(c){return c.trim().toUpperCase()});
+  });
+}
+
+// --- clipboard ops (OS clipboard, TSV) ---
+function copySelection(cut){
+  if(!manualMode||!selState.active){return}
+  var tsv=selectionToTSV();
+  writeClipboard(tsv).then(function(ok){
+    if(cut){
+      var r=selRect();
+      var grid=[];for(var ni=r.r0;ni<=r.r1;ni++){var rowArr=[];for(var di=r.c0;di<=r.c1;di++)rowArr.push('');grid.push(rowArr)}
+      var res=writeRangeToRota(r.r0,r.c0,grid);
+      showToast('Cut '+countCells(r)+' cell'+(countCells(r)===1?'':'s')+(ok?'':' (clipboard blocked — cleared locally)'));
+    } else {
+      showToast(ok?('Copied '+countCells(selRect())+' cell'+(countCells(selRect())===1?'':'s')):'Copy blocked by browser — try Ctrl/Cmd+C');
+    }
+  });
+}
+function countCells(r){return r?((r.r1-r.r0+1)*(r.c1-r.c0+1)):0}
+
+function pasteFromClipboard(){
+  if(!manualMode||!selState.active){return}
+  readClipboard().then(function(text){
+    if(text==null){showToast('Paste blocked by browser — use Ctrl/Cmd+V');return}
+    if(!text.trim()){return}
+    var grid=parseClipboardGrid(text);
+    if(!grid.length){return}
+    // Paste anchored at the selection's top-left corner.
+    var r=selRect();
+    var res=writeRangeToRota(r.r0,r.c0,grid);
+    // Grow the selection to cover what was pasted (clipped to grid).
+    var r1=Math.min(manualNav.names.length-1,r.r0+grid.length-1);
+    var maxCols=grid.reduce(function(m,row){return Math.max(m,row.length)},0);
+    var c1=Math.min(manualNav.days-1,r.c0+maxCols-1);
+    setSelection({ni:r.r0,di:r.c0},{ni:r1,di:c1});
+    var msg='Pasted '+res.written+' cell'+(res.written===1?'':'s');
+    if(res.invalid)msg+=' — '+res.invalid+' invalid skipped';
+    if(res.clipped)msg+=' — '+res.clipped+' clipped at edge';
+    showToast(msg);
+  });
+}
+
+// Clipboard API with graceful fallback (execCommand) for non-secure/older contexts.
+function writeClipboard(text){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(text).then(function(){return true}).catch(function(){return legacyCopy(text)});
+  }
+  return Promise.resolve(legacyCopy(text));
+}
+function legacyCopy(text){
+  try{
+    var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();
+    var ok=document.execCommand('copy');document.body.removeChild(ta);return ok;
+  }catch(e){return false}
+}
+function readClipboard(){
+  if(navigator.clipboard&&navigator.clipboard.readText){
+    return navigator.clipboard.readText().then(function(t){return t}).catch(function(){return null});
+  }
+  return Promise.resolve(null); // programmatic read unsupported — user must use Ctrl/Cmd+V (paste event)
+}
+
+// --- fill: extend the source rect's values across the drag target rect ---
+function applyFill(targetFocus){
+  if(!fillFrom)return;
+  var src=fillFrom;
+  var srcRows=src.r1-src.r0+1,srcCols=src.c1-src.c0+1;
+  var rota=loadRota(state.currentYear,state.currentMonth,state.currentTab);if(!rota)return;
+  // Single-axis, any-direction target rect (up/down/left/right) — same logic as the preview.
+  var tRect=fillTargetRect(targetFocus);
+  // Build the source values grid.
+  var srcGrid=[];for(var i=0;i<srcRows;i++){var rowArr=[];for(var j=0;j<srcCols;j++){var nm=manualNav.names[src.r0+i];rowArr.push((rota[nm]&&rota[nm][src.c0+j])?rota[nm][src.c0+j]:'')}srcGrid.push(rowArr)}
+  // Tile the source pattern across the whole target rect. Modulo is anchored to the source
+  // origin with negative correction, so tiling is correct when filling up/left too.
+  var grid=[];
+  for(var ni=tRect.r0;ni<=tRect.r1;ni++){
+    var line=[];
+    for(var di=tRect.c0;di<=tRect.c1;di++){
+      var si=(ni-src.r0)%srcRows;if(si<0)si+=srcRows;
+      var sj=(di-src.c0)%srcCols;if(sj<0)sj+=srcCols;
+      line.push(srcGrid[si][sj]);
+    }
+    grid.push(line);
+  }
+  var res=writeRangeToRota(tRect.r0,tRect.c0,grid);
+  setSelection({ni:tRect.r0,di:tRect.c0},{ni:tRect.r1,di:tRect.c1});
+  showToast('Filled '+res.written+' cell'+(res.written===1?'':'s'));
+}
+
+// --- keyboard helpers (Excel-style) ---
+function isArrowKey(k){return k==='ArrowUp'||k==='ArrowDown'||k==='ArrowLeft'||k==='ArrowRight'}
+
+// Is the user actively editing a cell (caret inside a contenteditable shift-cell)?
+function midEdit(){
+  var a=document.activeElement;
+  return !!(a&&a.classList&&a.classList.contains('shift-cell')&&a.getAttribute('contenteditable')==='true'&&a.classList.contains('editing'));
+}
+// Commit + drop focus from the active editing cell so keyboard selection can take over.
+function blurActiveCell(){
+  var a=document.activeElement;
+  if(a&&a.classList&&a.classList.contains('shift-cell'))a.blur();
+}
+
+// Extend the selection's focus corner by one cell (or to the grid edge when toEdge=true),
+// keeping the anchor fixed — exactly like Shift+Arrow / Ctrl+Shift+Arrow in Excel.
+function extendSelection(key,toEdge){
+  if(!selState.anchor||!selState.focus)return;
+  blurActiveCell();
+  var maxR=manualNav.names.length-1,maxC=manualNav.days-1;
+  var f={ni:selState.focus.ni,di:selState.focus.di};
+  if(key==='ArrowUp')   f.ni=toEdge?0:Math.max(0,f.ni-1);
+  else if(key==='ArrowDown') f.ni=toEdge?maxR:Math.min(maxR,f.ni+1);
+  else if(key==='ArrowLeft') f.di=toEdge?0:Math.max(0,f.di-1);
+  else if(key==='ArrowRight')f.di=toEdge?maxC:Math.min(maxC,f.di+1);
+  setSelection(selState.anchor,f);
+  // Keep the moving corner in view (horizontal scroll container).
+  var cell=getCellByIndex(f.ni,f.di);
+  if(cell&&cell.scrollIntoView)cell.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+
+// Clear the currently selected range (one undo step), then keep the range selected.
+function clearRange(){
+  var r=selRect();if(!r)return;
+  var grid=[];
+  for(var ni=r.r0;ni<=r.r1;ni++){var rowArr=[];for(var di=r.c0;di<=r.c1;di++)rowArr.push('');grid.push(rowArr)}
+  var res=writeRangeToRota(r.r0,r.c0,grid);
+  showToast('Cleared '+countCells(r)+' cell'+(countCells(r)===1?'':'s'));
 }
 
 function showAddOff(dayNum){
@@ -1308,7 +1875,7 @@ function showSetup(){
   var staff=loadStaff(),tab=state.currentTab,team=staff[tab]||[];
   var html='<h3>Staff Setup - '+(tab==='nurses'?'Nurses':'HouseKeeping')+'</h3><div style="margin-bottom:1rem">';
   team.forEach(function(s,i){
-    html+='<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;padding:.4rem;border-radius:6px;background:'+(s.active?'var(--staff-active-bg)':'var(--staff-inactive-bg)')+';border:1px solid '+(s.active?'var(--staff-active-border)':'var(--staff-inactive-border)')+'">';
+    html+='<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;padding:.4rem;border-radius:6px;background:'+(s.active?'#f0fdf4':'#fef2f2')+';border:1px solid '+(s.active?'#86efac':'#fca5a5')+'">';
     html+='<input type="checkbox" '+(s.active?'checked':'')+' onchange="SP.toggleStaff('+i+',this.checked)">';
     html+='<span id="staff-name-'+i+'" style="flex:1;font-weight:600;font-size:.85rem;cursor:pointer" onclick="SP.editName('+i+')" title="Click to rename">'+s.name+'</span>';
     // Night preference checkboxes (nurses: W1-W4, housekeeping: W1-W3 for 3 phases)
@@ -1327,8 +1894,8 @@ function showSetup(){
     html+='<button class="btn" style="font-size:.7rem;padding:2px 6px" onclick="SP.removeStaff('+i+')">x</button></div>';
   });
   html+='</div><div style="display:flex;gap:.4rem;margin-bottom:1.5rem"><input type="text" id="new-name" placeholder="New staff name" style="flex:1;padding:.4rem;border:1px solid var(--border);border-radius:6px;font-size:.85rem"><button class="btn btn-primary" onclick="SP.addStaff()">Add</button></div>';
-  html+='<h4 style="font-size:.85rem;color:var(--danger-heading);margin-bottom:.3rem">Incompatible Pairs</h4><p style="font-size:.7rem;color:var(--text-light);margin-bottom:.5rem">Cannot be on same shift.</p>';
-  (staff.incompatiblePairs||[]).forEach(function(p,i){html+='<div style="font-size:.8rem;margin-bottom:.3rem"><span style="background:var(--pair-chip-bg);padding:2px 6px;border-radius:4px">'+p[0]+' & '+p[1]+'</span> <button class="btn" style="font-size:.6rem;padding:1px 4px" onclick="SP.removePair('+i+')">x</button></div>'});
+  html+='<h4 style="font-size:.85rem;color:#dc2626;margin-bottom:.3rem">Incompatible Pairs</h4><p style="font-size:.7rem;color:var(--text-light);margin-bottom:.5rem">Cannot be on same shift.</p>';
+  (staff.incompatiblePairs||[]).forEach(function(p,i){html+='<div style="font-size:.8rem;margin-bottom:.3rem"><span style="background:#fee2e2;padding:2px 6px;border-radius:4px">'+p[0]+' & '+p[1]+'</span> <button class="btn" style="font-size:.6rem;padding:1px 4px" onclick="SP.removePair('+i+')">x</button></div>'});
   var names=team.filter(function(s){return s.role==='nurse'||s.role==='maid'}).map(function(s){return s.name});
   html+='<div style="display:flex;gap:.3rem;margin-top:.4rem"><select id="pa" style="font-size:.75rem"><option value="">Select</option>';
   names.forEach(function(n){html+='<option>'+n+'</option>'});
@@ -1597,9 +2164,13 @@ function exportPDF(){
   // Set document title (becomes default filename in Save As PDF)
   var origTitle=document.title;
   document.title='ShiftPlanner '+tabLabel+' '+monthName+' '+year;
+  // Mobile PDF fix: add .printing so the un-clip CSS (body.printing .rota-container/.rota-table)
+  // applies to the on-screen layout too — mobile browsers don't reliably honour @media print,
+  // and would otherwise capture only the visible slice of the horizontally-scrolled table.
+  document.body.classList.add('printing');
   window.print();
-  // Restore original title after print dialog closes
-  setTimeout(function(){document.title=origTitle},1000);
+  // Restore original title + remove the print class after the print dialog closes.
+  setTimeout(function(){document.title=origTitle;document.body.classList.remove('printing')},1000);
 }
 
 // ======= STAFF EXPORT / IMPORT =======
@@ -1698,5 +2269,5 @@ function importStaff(input){
 }
 
 // ======= PUBLIC API =======
-window.SP={version:APP_VERSION,changeMonth:changeMonth,switchTab:switchTab,generateRota:generateRota,manualRota:manualRota,showCustomDate:showCustomDate,applyCustomDate:applyCustomDate,showAddOff:showAddOff,applyAddOff:applyAddOff,editShift:editShift,applyShift:applyShift,confirmShift:confirmShift,saveManual:saveManual,undoLast:undoLast,showSetup:showSetup,toggleStaff:toggleStaff,changeRole:changeRole,removeStaff:removeStaff,addStaff:addStaff,editName:editName,editOrgName:editOrgName,setNightPref:setNightPref,addPair:addPair,removePair:removePair,closeModal:closeModal,closeAlert:closeAlert,hlName:hlName,hlShift:hlShift,hlAllNames:hlAllNames,hlAllShift:hlAllShift,clearHighlight:clearHighlight,exportPDF:exportPDF,exportStaff:exportStaff,importStaff:importStaff,toggleTheme:toggleTheme,setTheme:setTheme};
+window.SP={version:APP_VERSION,toggleTheme:toggleTheme,setTheme:setTheme,changeMonth:changeMonth,switchTab:switchTab,generateRota:generateRota,manualRota:manualRota,showCustomDate:showCustomDate,applyCustomDate:applyCustomDate,showAddOff:showAddOff,applyAddOff:applyAddOff,editShift:editShift,applyShift:applyShift,confirmShift:confirmShift,saveManual:saveManual,undoLast:undoLast,showSetup:showSetup,toggleStaff:toggleStaff,changeRole:changeRole,removeStaff:removeStaff,addStaff:addStaff,editName:editName,editOrgName:editOrgName,setNightPref:setNightPref,addPair:addPair,removePair:removePair,closeModal:closeModal,closeAlert:closeAlert,hlName:hlName,hlShift:hlShift,hlAllNames:hlAllNames,hlAllShift:hlAllShift,clearHighlight:clearHighlight,exportPDF:exportPDF,exportStaff:exportStaff,importStaff:importStaff,copySel:function(){copySelection(false)},cutSel:function(){copySelection(true)},pasteSel:pasteFromClipboard,clearSel:clearSelection};
 })();

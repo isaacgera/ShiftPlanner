@@ -108,6 +108,8 @@ Doc-only clarifications — no functionality changed:
 
 ## Completed (Reference)
 
+- [x] **v4.3.0 — Manual-mode spreadsheet editing**: edit-on-demand cells (single-click to type), 2D range select (drag any direction, Shift+click, Shift+Arrow, Ctrl+Shift+Arrow, Ctrl+A), OS-clipboard copy/cut/paste (TSV, Excel-compatible), Del clear, Excel-style 2D fill handle, touch Copy/Cut/Paste/Clear toolbar; single undo step per block (Session 18)
+- [x] **v4.3.0 — Mobile PDF-export fix**: `.printing` body class un-clips the rota so mobile browsers capture the full month, not just the on-screen slice (Session 18)
 - [x] **v4.2.0 — Light/Dark theme toggle** (two-state header toggle, `sp_theme` persistence, OS-pref default, tokenised colour system, `[data-theme=dark]` block) (Session 16)
 - [x] **v4.2.0 — Dark-mode contrast to WCAG AA** (`.btn`/`select`/`.shift-btn` text colour, Sunday-red, Manual/Warning alert bodies; Lighthouse Accessibility 100 in both themes) (Session 16)
 - [x] **v4.2.0 — Flash-of-light guard** (inline `<head>` script sets theme before paint) + **print always light** (print resets theme tokens) + **Staff Setup dark polish** (Session 16)

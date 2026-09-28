@@ -1146,3 +1146,104 @@ Powered by Forjé
 - `UserGuide.html` — credit lines under the existing tagline
 - `overview.html` — new footer credit
 - `session-log.md` — this entry
+
+---
+
+## Session 18 — Sep 28, 2026
+**v4.3.0 — Manual-mode spreadsheet editing (range select, OS-clipboard copy/cut/paste, Excel-style fill) + mobile PDF-export fix (prototype-first, then ported)**
+**AI Partner:** Forjé
+
+### Workflow
+Started as a Bug Fix (mobile PDF export) but grew into a feature build when Isaac asked for
+Excel-style multi-cell editing — promoted to **Quick Spec** mid-conversation. Followed the
+**prototype-first** rule throughout: built and iterated everything in
+`prototypes/ShiftPlanner-prototype.html` + `app-proto.js` (sandbox, `spproto_`-namespaced storage),
+across several review rounds with Isaac, then ported the finalized work into the live app in one
+deliberate pass with the release chores.
+
+### What Was Built (v4.3.0)
+
+#### Mobile PDF-export fix
+- Mobile browsers (Android Chrome / iOS Safari) don't reliably apply `@media print` overrides —
+  they capture the current on-screen viewport, so the horizontally-scrollable `.rota-container`
+  stayed clipped and only the visible slice landed in the PDF (desktop was fine).
+- Fix: `exportPDF()` now adds a `.printing` class to `<body>` just before `window.print()` (removed
+  after), and new `body.printing .rota-container{overflow:visible}` / `body.printing .rota-table{min-width:0;width:100%}`
+  rules un-clip the table in the **on-screen** layout too, independent of print-media support.
+  Belt-and-braces with the existing `@media print` block (which keeps desktop working).
+
+#### Manual-mode spreadsheet editing (new)
+Reworked Manual mode from permanently-`contenteditable` cells to an **edit-on-demand** model —
+this was the key architectural change that made robust grid selection possible (permanently-editable
+cells triggered the browser's native text-selection drag, which fought the grid selection).
+- **Edit on demand:** cells are `contenteditable=false` at rest. A **single click** selects the cell
+  and enters edit mode so you can type immediately (double-click also works); a **drag** does pure
+  grid selection with no native interference.
+- **Range selection:** click-drag selects a true 2D rectangle in any direction (tracked at the
+  document level via `mousemove` + `elementsFromPoint`, not per-cell `mouseenter`, which the native
+  text-drag suppressed). Shift+click extends; Shift+Arrow extends by one; Ctrl+Shift+Arrow extends to
+  the grid edge; Ctrl+A selects all; Esc clears.
+- **OS-clipboard copy/cut/paste (TSV):** via native `copy`/`cut`/`paste` events (no permission
+  prompt), so it round-trips with **Excel** and other apps. Works for a single cell or a range.
+  Pasted codes are validated the same as typing (invalid skipped with a count), clipped at the grid
+  edge, one undo step per block. Del clears the selected range.
+- **Excel-style fill handle:** a small square at the active cell's bottom-right corner (rendered as
+  an overlay in `.rota-container`, not a child of the contenteditable cell, so focus can't swallow
+  it). Dragging it fills the source value(s) across a **full 2D rectangle in any direction**; the
+  source pattern tiles for multi-cell sources. One undo step.
+- **Touch toolbar:** a floating Copy/Cut/Paste/Clear bar appears at the bottom when a range is
+  selected, for phones/tablets with no keyboard. It's set `pointer-events:none` during a drag so it
+  never blocks cell hit-testing.
+
+### Debugging note (for the record)
+Selection/fill went through several rounds because the real root causes were non-obvious: (1) the
+permanently-`contenteditable` cells hijacking mouse drags via native text selection; (2) the floating
+toolbar intercepting `elementFromPoint` during a drag (froze tracking — found via a temporary on-screen
+debug readout); (3) the fill handle being locked to a single axis when Isaac wanted a 2D block; and
+(4) browser caching serving stale prototype files during testing (surfaced when the version badge
+didn't match). A temporary `SP.debugSel()` readout was added to get ground truth, then **stripped
+before porting**. The final model is clean: edit-on-demand + document-level drag tracking + isolated
+fill state (`fillFrom`/`fillTarget`, never `selState`).
+
+### Release chores
+- `APP_VERSION` bumped **4.2.0 → 4.3.0** (minor: substantial new user-facing feature).
+- SW `CACHE_NAME` bumped **shiftplanner-v11 → v12** so installed PWA users pull the update.
+- Prototype debug code stripped; `app-proto.js` version reset to `4.3.0-proto`.
+- Ideas backlog row → **In Progress (v4.3.0)** — kept In Progress pending Isaac's **mobile** test
+  and sign-off (per the standing rule, Forjé does not flip to Built without explicit verification).
+
+### Verification
+- IDE diagnostics clean on `app.js`, `ShiftPlanner.html`, `sw.js`.
+- Ported by copying the finalized `app-proto.js` → `app.js` then swapping the two proto-only values
+  (`APP_VERSION` → `4.3.0`, `PK` → `sp_`); confirmed no `proto`/`spproto_`/debug references remain in
+  live `app.js`. HTML additions (selection/fill/toolbar CSS, `body.printing` fix, updated manual-hint,
+  `sel-toolbar` markup) ported into the live `ShiftPlanner.html`, preserving the branding footer.
+- Storage keys resolve to the original `sp_*` (via `PK='sp_'`) — existing users' data loads
+  seamlessly, no migration needed.
+- **Mobile PDF fix confirmed in DevTools device mode by Isaac; NOT yet confirmed on a real device.**
+- **Not otherwise browser-tested in this environment** (Windows shell can't run a live server) —
+  Isaac verified each behaviour in the prototype via Live Server across the review rounds.
+
+### Manual re-check for Isaac (before flipping backlog to Built)
+1. Hard-refresh over Live Server (or the v12 SW will update on next load); DevTools → Application →
+   Service Workers: confirm the new worker activates and cache is `shiftplanner-v12`. Header badge = v4.3.0.
+2. Manual mode, both tabs: single-click to type; drag a 2D rectangle in all directions; Shift+Arrow /
+   Ctrl+Shift+Arrow / Ctrl+A / Del; copy a block to Excel and paste one back; drag the fill handle in
+   all four directions and diagonally.
+3. **Mobile:** open on a real phone, Export PDF, confirm the full month lands in the PDF (not just the
+   visible slice).
+4. Deploy: `git push` the release branch / merge to main; GitHub Pages serves within 1–2 min.
+5. Once verified live (incl. mobile PDF), set the Ideas backlog row → **Built (ShiftPlanner v4.3.0)**.
+
+### Files Modified
+- `app.js` — ported full v4.3.0 manual-mode logic (edit-on-demand, range selection, OS clipboard,
+  Excel-style 2D fill, keyboard shortcuts), mobile PDF `.printing` toggle in `exportPDF`,
+  `APP_VERSION` 4.2.0 → 4.3.0 (re-namespaced to `sp_`)
+- `ShiftPlanner.html` — selection/fill/toolbar CSS, `body.printing` mobile PDF rules,
+  `.rota-container{position:relative}`, updated manual-hint text, `sel-toolbar` markup (footer preserved)
+- `sw.js` — `CACHE_NAME` v11 → v12
+- `UserGuide.html` — new "Spreadsheet-Style Editing (select, copy, paste, fill)" section
+- `overview.html` — version string → v4.3.0 + feature blurb
+- `prototypes/ShiftPlanner-prototype.html` + `app-proto.js` — finalized feature build; debug code stripped
+- `session-log.md` — this entry
+- `Ideas.md` (backlog) — row → In Progress (v4.3.0)
