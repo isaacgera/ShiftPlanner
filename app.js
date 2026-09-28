@@ -2155,22 +2155,41 @@ document.addEventListener('click',function(e){
   clearHighlight();
 });
 
-// ======= EXPORT PDF =======
+// ======= SHARE / PRINT (Save as PDF) =======
+// One reliable path for all platforms. The browser's print dialog is the cross-platform way to
+// "Save as PDF" and share:
+//   • iPhone/iPad (Safari): opens the iOS print/share sheet → Save to Files (PDF), WhatsApp,
+//     AirPrint, etc. A bare window.print() can no-op on iOS, so we call it directly in the click
+//     (user-gesture) context and clean up on the afterprint event rather than a racy timeout.
+//   • Android (Chrome): print dialog with a "Save as PDF" destination + Share.
+//   • Desktop: Save as PDF / printer.
 function exportPDF(){
   var tab=state.currentTab;
   var tabLabel=tab==='nurses'?'Nurses':'HouseKeeping';
   var monthName=MONTH_NAMES[state.currentMonth];
   var year=state.currentYear;
-  // Set document title (becomes default filename in Save As PDF)
   var origTitle=document.title;
+  // Document title becomes the default PDF filename in the Save/Share dialog.
   document.title='ShiftPlanner '+tabLabel+' '+monthName+' '+year;
-  // Mobile PDF fix: add .printing so the un-clip CSS (body.printing .rota-container/.rota-table)
-  // applies to the on-screen layout too — mobile browsers don't reliably honour @media print,
-  // and would otherwise capture only the visible slice of the horizontally-scrolled table.
+  // Mobile PDF fix: add .printing so the un-clip CSS applies to the on-screen layout too —
+  // mobile browsers don't reliably honour @media print and would otherwise capture only the
+  // visible slice of the horizontally-scrolled table.
   document.body.classList.add('printing');
+
+  var cleaned=false;
+  function cleanup(){
+    if(cleaned)return;cleaned=true;
+    document.title=origTitle;
+    document.body.classList.remove('printing');
+    window.removeEventListener('afterprint',cleanup);
+  }
+  // Clean up when the print/share sheet closes (reliable on iOS + desktop). Fallback timeout
+  // covers browsers that don't fire afterprint.
+  window.addEventListener('afterprint',cleanup);
+  setTimeout(cleanup,60000);
+
+  // Call print synchronously in the user gesture (important for iOS Safari).
   window.print();
-  // Restore original title + remove the print class after the print dialog closes.
-  setTimeout(function(){document.title=origTitle;document.body.classList.remove('printing')},1000);
 }
 
 // ======= STAFF EXPORT / IMPORT =======

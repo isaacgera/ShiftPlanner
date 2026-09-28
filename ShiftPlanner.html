@@ -269,6 +269,11 @@ body.printing .rota-table{min-width:0!important;width:100%!important}
   .rota-table td.name-cell{position:static!important;border:1.5px solid #000}
   .rota-table td.shift-cell{-webkit-print-color-adjust:exact;print-color-adjust:exact;border:1.5px solid #000}
   .rota-table td.shift-cell:hover{transform:none;box-shadow:none}
+  /* Never print the manual-mode selection chrome — strip the range highlight (background + ring)
+     and hide the fill handle so the PDF shows a clean rota, not the on-screen selection. */
+  .rota-table.manual-mode td.shift-cell.sel-cell,
+  .rota-table.manual-mode td.shift-cell.sel-active{box-shadow:none!important;background:transparent!important}
+  .fill-handle{display:none!important}
   .rota-container{border:none;box-shadow:none;border-radius:0;overflow:visible;margin-bottom:8px}
   /* Summary table - uniform 1.5px borders */
   .summary-table{font-size:9pt;margin-bottom:0;border:1.5px solid #000}
@@ -328,12 +333,12 @@ body.printing .rota-table{min-width:0!important;width:100%!important}
       </div>
       <div class="no-print" style="display:flex;gap:.5rem">
         <button class="btn" onclick="SP.showSetup()">Staff Setup</button>
-        <button class="btn" onclick="SP.exportPDF()">Export PDF</button>
+        <button class="btn" onclick="SP.exportPDF()" title="Share or save the rota as a PDF">Share / Print</button>
       </div>
     </div>
   </header>
 
-  <div class="manual-hint no-print" id="manual-hint">Manual mode (spreadsheet-style): click a cell to select it; double-click or just start typing to edit (codes: M, G, A, N, O, PL, MA, AN); Enter/Tab/arrows move. Drag to select a range; Shift+click or Shift+Arrow extends; Ctrl+Shift+Arrow extends to the edge; Ctrl+A selects all; Ctrl+C/X/V copy/cut/paste (works with Excel); Del clears; drag the corner handle to fill in any direction.</div>
+  <div class="manual-hint no-print" id="manual-hint">Manual mode: click a cell and type a shift code (M, G, A, N, O, PL, MA, AN). Enter/Tab/arrows move between cells. Invalid entries are rejected.</div>
 
   <main id="rota-content"></main>
 

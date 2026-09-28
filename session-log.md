@@ -1247,3 +1247,49 @@ fill state (`fillFrom`/`fillTarget`, never `selState`).
 - `prototypes/ShiftPlanner-prototype.html` + `app-proto.js` — finalized feature build; debug code stripped
 - `session-log.md` — this entry
 - `Ideas.md` (backlog) — row → In Progress (v4.3.0)
+
+---
+
+## Session 18 (addendum) — Sep 28, 2026
+**v4.3.0 follow-up fixes from real-device (iPhone) testing — Share/Print + clean PDF (no version bump)**
+**AI Partner:** Forjé
+
+### Context
+Isaac tested the shipped v4.3.0 on a real iPhone (17 Pro Max) and flagged three things. All are
+small display/print fixes — folded into **v4.3.0** (version number unchanged, as Isaac asked); only
+the SW `CACHE_NAME` bumped so the installed PWA pulls the update.
+
+### Fixes (prototype-first, then ported to live)
+1. **iOS "Export PDF" did nothing.** A bare `window.print()` can no-op on iOS Safari (esp. standalone
+   PWA). Reworked `exportPDF()`: `window.print()` is now called **synchronously in the click
+   (user-gesture) context**, and cleanup (title + `.printing` class) hangs off the **`afterprint`**
+   event with a long fallback timeout, instead of a racy 1s timeout. This reliably opens the iOS
+   print/share sheet (Save to Files as PDF, WhatsApp, AirPrint). Same path works on Android (Chrome
+   "Save as PDF"/Share) and desktop — one cross-platform flow.
+2. **Button renamed "Export PDF" → "Share / Print"** (+ tooltip). No extra menu, no Web Share link
+   (Isaac's call) — tapping goes straight to the print/save flow, which on mobile IS the native
+   share sheet.
+3. **PDF was showing the on-screen selection chrome** (range highlight + fill handle). Added
+   `@media print` rules that strip `.sel-cell`/`.sel-active` background+ring and `display:none` the
+   `.fill-handle`, so the PDF shows a clean rota.
+4. **Manual-mode hint trimmed** back to the concise core (dropped the long "Drag to select…" tail
+   that was crowding the screen on mobile).
+
+### Release chores
+- `APP_VERSION` **unchanged at 4.3.0** (display/print fixes only, per Isaac).
+- SW `CACHE_NAME` **shiftplanner-v12 → v13** so installed PWA users pull the fixes.
+- Ideas backlog row stays **In Progress (v4.3.0)** — awaiting Isaac's iPhone re-test + sign-off
+  before flipping to Built.
+
+### Verification
+- IDE diagnostics clean on `app.js`, `ShiftPlanner.html`, `sw.js`.
+- iOS print reliability can only be fully confirmed on a real device — Isaac to re-test on the live
+  GitHub Pages URL after this deploys (hard-refresh / let the v13 SW activate first).
+
+### Files Modified
+- `app.js` — `exportPDF()` rework (synchronous print + `afterprint` cleanup)
+- `ShiftPlanner.html` — button → "Share / Print", trimmed manual-hint, `@media print` hide of
+  selection highlight + fill handle
+- `sw.js` — `CACHE_NAME` v12 → v13
+- `prototypes/*` — same fixes iterated first (proto version tag kept at 4.3.0-proto)
+- `session-log.md` — this addendum
