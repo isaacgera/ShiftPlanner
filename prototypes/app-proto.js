@@ -4,7 +4,7 @@
 // Single source of truth for the app version (semantic: major.minor.patch).
 // This is the app version — distinct from the service-worker CACHE_NAME, which is
 // just a cache-busting tag. Bump this on every release and note it in the changelog.
-var APP_VERSION='4.3.0-proto';
+var APP_VERSION='4.4.0-proto';
 
 // localStorage key prefix for all app data.
 // PROTOTYPE: namespaced with 'spproto_' so this sandbox can never read or overwrite
@@ -824,6 +824,8 @@ function showToast(msg){
   var el=document.createElement('div');el.textContent=msg;
   el.style.cssText='position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:.5rem 1.2rem;border-radius:6px;font-size:.85rem;z-index:3000;opacity:1;transition:opacity .5s';
   document.body.appendChild(el);setTimeout(function(){el.style.opacity='0'},1500);setTimeout(function(){el.remove()},2000);
+  // Mirror to the live region so screen-reader users get the same feedback (a11y S7).
+  if(typeof announce==='function')announce(msg);
 }
 
 // ======= RENDERING =======
@@ -857,30 +859,33 @@ function render(){
     var hasOff=false;
     nur.forEach(function(n){var s=rota[n.name]?rota[n.name][d-1]:'';if(s==='O'||s==='PL')hasOff=true});
     var fullyStaffed=(!hasOff && minCov>=covTarget);
-    var dotHtml=fullyStaffed?'<span style="position:absolute;top:1px;right:2px;font-size:1rem;color:var(--cov-ok-fg);line-height:1;cursor:pointer" onclick="SP.showAddOff('+d+')" title="Fully staffed - click to add off">*</span>':'';
-    html+='<th class="day-header'+(dow===0?' sun':'')+'" style="'+covStyle+'position:relative;" title="Day '+d+': M='+cov.M+' A='+cov.A+' N='+cov.N+(fullyStaffed?' | Fully staffed - click * to add off':'')+'">'+dotHtml+'<span class="day-name">'+DAY_NAMES[dow]+'</span>'+d+'</th>';
+    var dotHtml=fullyStaffed?'<button type="button" class="cov-dot" onclick="SP.showAddOff('+d+')" aria-label="Day '+d+' fully staffed - add a day off" title="Fully staffed - click to add off">*</button>':'';
+    // Non-colour coverage cue (S6): OK / low(!) / gap alongside the colour fill.
+    var covCue=(minCov>=covTarget)?'':(minCov>=1?' ⚠':' ✕');
+    var covWord=(minCov>=covTarget)?'coverage OK':(minCov>=1?'low coverage':'coverage gap');
+    html+='<th class="day-header'+(dow===0?' sun':'')+'" style="'+covStyle+'position:relative;" title="Day '+d+': M='+cov.M+' A='+cov.A+' N='+cov.N+' — '+covWord+(fullyStaffed?' | Fully staffed - add off via the * button':'')+'">'+dotHtml+'<span class="day-name">'+DAY_NAMES[dow]+'</span>'+d+'<span class="cov-cue" aria-hidden="true">'+covCue+'</span></th>';
   }
   html+='</tr></thead><tbody>';
   team.forEach(function(p){
     html+='<tr data-nurse="'+p.name+'"><td class="name-cell">'+p.name+'</td>';
-    for(var d=0;d<days;d++){var s=rota[p.name]?rota[p.name][d]||'-':'-';html+='<td class="shift-cell shift-'+s+'" data-nurse="'+p.name+'" data-shift="'+s+'" data-day="'+d+'" onclick="SP.editShift(\''+p.name+'\','+d+')" title="'+p.name+' Day '+(d+1)+'">'+s+'</td>'}
+    for(var d=0;d<days;d++){var s=rota[p.name]?rota[p.name][d]||'-':'-';var lbl=(SHIFT_LABELS[s]?s+' ('+SHIFT_LABELS[s]+')':(s==='-'?'empty':s));html+='<td class="shift-cell shift-'+s+'" data-nurse="'+p.name+'" data-shift="'+s+'" data-day="'+d+'" tabindex="0" role="button" onclick="SP.editShift(\''+p.name+'\','+d+')" aria-label="'+p.name+', day '+(d+1)+': '+lbl+'. Edit shift." title="'+p.name+' Day '+(d+1)+'">'+s+'</td>'}
     html+='</tr>';
   });
   html+='</tbody></table></div>';
-  html+='<h3 style="font-size:.85rem;margin-bottom:.5rem;color:var(--accent)">Shift Count</h3><table class="summary-table" id="summary-tbl"><thead><tr><th class="count-cell" onclick="SP.hlAllNames()">Name</th><th class="sh-G count-cell" onclick="SP.hlAllShift(\'G\')">G</th><th class="sh-M count-cell" onclick="SP.hlAllShift(\'M\')">M</th><th class="sh-MA count-cell" onclick="SP.hlAllShift(\'MA\')">MA</th><th class="sh-A count-cell" onclick="SP.hlAllShift(\'A\')">A</th><th class="sh-AN count-cell" onclick="SP.hlAllShift(\'AN\')">AN</th><th class="sh-N count-cell" onclick="SP.hlAllShift(\'N\')">N</th><th class="sh-O count-cell" onclick="SP.hlAllShift(\'O\')">O</th><th class="sh-PL count-cell" onclick="SP.hlAllShift(\'PL\')">PL</th><th class="count-cell" onclick="SP.hlAllNames()">Total</th></tr></thead><tbody>';
+  html+='<h3 style="font-size:.85rem;margin-bottom:.5rem;color:var(--accent)">Shift Count</h3><table class="summary-table" id="summary-tbl" aria-label="Shift count summary — click a header or cell to highlight"><thead><tr><th class="count-cell" tabindex="0" role="button" aria-label="Highlight all names" onclick="SP.hlAllNames()">Name</th><th class="sh-G count-cell" tabindex="0" role="button" aria-label="Highlight all G shifts" onclick="SP.hlAllShift(\'G\')">G</th><th class="sh-M count-cell" tabindex="0" role="button" aria-label="Highlight all M shifts" onclick="SP.hlAllShift(\'M\')">M</th><th class="sh-MA count-cell" tabindex="0" role="button" aria-label="Highlight all MA shifts" onclick="SP.hlAllShift(\'MA\')">MA</th><th class="sh-A count-cell" tabindex="0" role="button" aria-label="Highlight all A shifts" onclick="SP.hlAllShift(\'A\')">A</th><th class="sh-AN count-cell" tabindex="0" role="button" aria-label="Highlight all AN shifts" onclick="SP.hlAllShift(\'AN\')">AN</th><th class="sh-N count-cell" tabindex="0" role="button" aria-label="Highlight all N shifts" onclick="SP.hlAllShift(\'N\')">N</th><th class="sh-O count-cell" tabindex="0" role="button" aria-label="Highlight all O shifts" onclick="SP.hlAllShift(\'O\')">O</th><th class="sh-PL count-cell" tabindex="0" role="button" aria-label="Highlight all PL shifts" onclick="SP.hlAllShift(\'PL\')">PL</th><th class="count-cell" tabindex="0" role="button" aria-label="Highlight all names" onclick="SP.hlAllNames()">Total</th></tr></thead><tbody>';
   team.forEach(function(p){
     var c={M:0,G:0,A:0,N:0,MA:0,AN:0,O:0,PL:0};(rota[p.name]||[]).forEach(function(s){if(s==='MA'){c.MA++}else if(s==='AN'){c.AN++}else if(c.hasOwnProperty(s))c[s]++});
     var tot=c.G+c.M+c.MA+c.A+c.AN+c.N+c.O+c.PL; // live sum; equals days-in-month when the row is fully filled
-    html+='<tr><td class="name-cell" onclick="SP.hlName(\''+p.name+'\')">'+p.name+'</td>';
-    html+='<td class="count-cell" onclick="SP.hlShift(\''+p.name+'\',\'G\')">'+c.G+'</td>';
-    html+='<td class="count-cell" onclick="SP.hlShift(\''+p.name+'\',\'M\')">'+c.M+'</td>';
-    html+='<td class="count-cell" onclick="SP.hlShift(\''+p.name+'\',\'MA\')">'+c.MA+'</td>';
-    html+='<td class="count-cell" onclick="SP.hlShift(\''+p.name+'\',\'A\')">'+c.A+'</td>';
-    html+='<td class="count-cell" onclick="SP.hlShift(\''+p.name+'\',\'AN\')">'+c.AN+'</td>';
-    html+='<td class="count-cell" onclick="SP.hlShift(\''+p.name+'\',\'N\')">'+c.N+'</td>';
-    html+='<td class="count-cell" onclick="SP.hlShift(\''+p.name+'\',\'O\')">'+c.O+'</td>';
-    html+='<td class="count-cell" onclick="SP.hlShift(\''+p.name+'\',\'PL\')">'+c.PL+'</td>';
-    html+='<td class="total-col count-cell" onclick="SP.hlName(\''+p.name+'\')">'+tot+'</td></tr>';
+    html+='<tr><td class="name-cell" tabindex="0" role="button" aria-label="Highlight '+p.name+'\u2019s row" onclick="SP.hlName(\''+p.name+'\')">'+p.name+'</td>';
+    html+='<td class="count-cell" tabindex="0" role="button" aria-label="'+p.name+' G '+c.G+', highlight" onclick="SP.hlShift(\''+p.name+'\',\'G\')">'+c.G+'</td>';
+    html+='<td class="count-cell" tabindex="0" role="button" aria-label="'+p.name+' M '+c.M+', highlight" onclick="SP.hlShift(\''+p.name+'\',\'M\')">'+c.M+'</td>';
+    html+='<td class="count-cell" tabindex="0" role="button" aria-label="'+p.name+' MA '+c.MA+', highlight" onclick="SP.hlShift(\''+p.name+'\',\'MA\')">'+c.MA+'</td>';
+    html+='<td class="count-cell" tabindex="0" role="button" aria-label="'+p.name+' A '+c.A+', highlight" onclick="SP.hlShift(\''+p.name+'\',\'A\')">'+c.A+'</td>';
+    html+='<td class="count-cell" tabindex="0" role="button" aria-label="'+p.name+' AN '+c.AN+', highlight" onclick="SP.hlShift(\''+p.name+'\',\'AN\')">'+c.AN+'</td>';
+    html+='<td class="count-cell" tabindex="0" role="button" aria-label="'+p.name+' N '+c.N+', highlight" onclick="SP.hlShift(\''+p.name+'\',\'N\')">'+c.N+'</td>';
+    html+='<td class="count-cell" tabindex="0" role="button" aria-label="'+p.name+' O '+c.O+', highlight" onclick="SP.hlShift(\''+p.name+'\',\'O\')">'+c.O+'</td>';
+    html+='<td class="count-cell" tabindex="0" role="button" aria-label="'+p.name+' PL '+c.PL+', highlight" onclick="SP.hlShift(\''+p.name+'\',\'PL\')">'+c.PL+'</td>';
+    html+='<td class="total-col count-cell" tabindex="0" role="button" aria-label="'+p.name+' total '+tot+', highlight row" onclick="SP.hlName(\''+p.name+'\')">'+tot+'</td></tr>';
   });
   html+='</tbody></table>';
   html+='<p style="font-size:.7rem;color:var(--text-light);margin-top:1rem;font-style:italic">NOTE: Shifts may change for coverage. Mutual swaps must be informed to the incharge.</p>';
@@ -922,20 +927,27 @@ function refreshSummaryAndCoverage(){
       var bg=(minCov>=covTarget)?'var(--cov-ok)':(minCov>=1?'var(--cov-warn)':'var(--cov-danger)');
       th.style.background=bg;
       var fullyStaffed=(!hasOff&&minCov>=covTarget);
-      // Rebuild/remove the asterisk span
+      // Rebuild/remove the asterisk — a real <button> so it stays keyboard-accessible (a11y S1),
+      // matching what render() emits.
       var existingDot=th.querySelector('.cov-dot');
       if(fullyStaffed){
         if(!existingDot){
-          var span=document.createElement('span');
-          span.className='cov-dot';
-          span.style.cssText='position:absolute;top:1px;right:2px;font-size:1rem;color:var(--cov-ok-fg);line-height:1;cursor:pointer';
-          span.title='Fully staffed - click to add off';
-          span.textContent='*';
-          span.setAttribute('onclick','SP.showAddOff('+d+')');
-          th.insertBefore(span,th.firstChild);
+          var btn=document.createElement('button');
+          btn.type='button';
+          btn.className='cov-dot';
+          btn.title='Fully staffed - click to add off';
+          btn.setAttribute('aria-label','Day '+d+' fully staffed - add a day off');
+          btn.textContent='*';
+          btn.setAttribute('onclick','SP.showAddOff('+d+')');
+          th.insertBefore(btn,th.firstChild);
         }
       } else if(existingDot){existingDot.remove()}
-      th.title='Day '+d+': M='+cov.M+' A='+cov.A+' N='+cov.N+(fullyStaffed?' | Fully staffed - click * to add off':'');
+      // Keep the non-colour coverage cue glyph in sync (S6).
+      var cue=th.querySelector('.cov-cue');
+      var cueTxt=(minCov>=covTarget)?'':(minCov>=1?' ⚠':' ✕');
+      if(cue)cue.textContent=cueTxt;
+      var covWord=(minCov>=covTarget)?'coverage OK':(minCov>=1?'low coverage':'coverage gap');
+      th.title='Day '+d+': M='+cov.M+' A='+cov.A+' N='+cov.N+' — '+covWord+(fullyStaffed?' | Fully staffed - add off via the * button':'');
     }
   }
 
@@ -962,8 +974,12 @@ function refreshSummaryAndCoverage(){
   }
 }
 function updateTabs(){
-  document.getElementById('tab-nurses').classList.toggle('active',state.currentTab==='nurses');
-  document.getElementById('tab-housekeeping').classList.toggle('active',state.currentTab==='housekeeping');
+  var tn=document.getElementById('tab-nurses'),th=document.getElementById('tab-housekeeping');
+  var nurses=state.currentTab==='nurses';
+  tn.classList.toggle('active',nurses);
+  th.classList.toggle('active',!nurses);
+  tn.setAttribute('aria-selected',nurses?'true':'false');
+  th.setAttribute('aria-selected',!nurses?'true':'false');
 }
 
 // ======= INTERACTIONS =======
@@ -987,8 +1003,8 @@ function showCustomDate(){
   var html='<h3>Go to Month</h3>';
   html+='<p style="font-size:.8rem;color:var(--text-light);margin-bottom:1rem">Pick any month and year — including past months not shown in the quick list.</p>';
   html+='<div style="display:flex;gap:.5rem;margin-bottom:1.2rem">';
-  html+='<select id="cd-month" style="flex:1">'+monthOpts+'</select>';
-  html+='<select id="cd-year" style="flex:1">'+yearOpts+'</select>';
+  html+='<select id="cd-month" aria-label="Month" style="flex:1">'+monthOpts+'</select>';
+  html+='<select id="cd-year" aria-label="Year" style="flex:1">'+yearOpts+'</select>';
   html+='</div>';
   html+='<div style="display:flex;gap:.5rem;justify-content:flex-end"><button class="btn" onclick="SP.closeModal()">Cancel</button><button class="btn btn-primary" onclick="SP.applyCustomDate()">Go</button></div>';
   showModal(html);
@@ -1398,6 +1414,7 @@ function commitManualCell(name,di,cell){
     cell.classList.add('invalid-flash');
     setTimeout(function(){cell.classList.remove('invalid-flash')},400);
     showToast('"'+raw+'" is not a valid shift. Use: '+VALID_SHIFTS.join(', '));
+    announceError('"'+raw+'" is not a valid shift'); // assertive — errors interrupt (S-b)
     paintCell(cell,prev);
     return;
   }
@@ -1830,6 +1847,8 @@ function editShift(name,di){
   var popup=document.createElement('div');
   popup.id='inline-popup';
   popup.className='inline-popup';
+  popup.setAttribute('role','menu');
+  popup.setAttribute('aria-label','Choose shift for '+name+', day '+(di+1));
   // Position near the cell
   var top=rect.bottom+window.scrollY+2;
   var left=rect.left+window.scrollX-40;
@@ -1837,20 +1856,41 @@ function editShift(name,di){
   if(left<0)left=4;
   popup.style.top=top+'px';
   popup.style.left=left+'px';
+  var btns=[];
   ['M','G','A','N','O','PL','MA','AN'].forEach(function(s){
     var btn=document.createElement('button');
     btn.className='ip-btn'+(s===cur?' sel':'');
     btn.textContent=s;
+    btn.setAttribute('role','menuitem');
+    btn.setAttribute('aria-label',SHIFT_LABELS[s]?s+' ('+SHIFT_LABELS[s]+')':s);
     btn.onclick=function(e){e.stopPropagation();SP.applyShift(name,di,s)};
     popup.appendChild(btn);
+    btns.push(btn);
   });
   document.body.appendChild(popup);
+  // Focus management (a11y S3): remember the opener, focus the selected (or first) option,
+  // trap arrow keys within the options, and close on Esc returning focus to the cell.
+  var opener=targetCell;
+  var selBtn=popup.querySelector('.ip-btn.sel')||btns[0];
+  if(selBtn)selBtn.focus();
+  function closePopup(returnFocus){
+    if(!document.body.contains(popup))return;
+    popup.remove();
+    document.removeEventListener('click',outside,true);
+    document.removeEventListener('keydown',keys,true);
+    if(returnFocus&&opener&&opener.focus)opener.focus();
+  }
+  function keys(e){
+    var i=btns.indexOf(document.activeElement);
+    if(e.key==='Escape'){e.preventDefault();closePopup(true);}
+    else if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();(btns[(i+1+btns.length)%btns.length]||btns[0]).focus();}
+    else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();(btns[(i-1+btns.length)%btns.length]||btns[0]).focus();}
+    else if(e.key==='Tab'){closePopup(false);} // let focus move on naturally
+  }
+  function outside(e){if(!popup.contains(e.target))closePopup(false)}
+  document.addEventListener('keydown',keys,true);
   // Close popup on outside click
-  setTimeout(function(){
-    document.addEventListener('click',function handler(e){
-      if(!popup.contains(e.target)){popup.remove();document.removeEventListener('click',handler)}
-    });
-  },10);
+  setTimeout(function(){document.addEventListener('click',outside,true);},10);
 }
 
 function applyShift(name,di,shift){
@@ -1880,7 +1920,7 @@ function showSetup(){
   team.forEach(function(s,i){
     html+='<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;padding:.4rem;border-radius:6px;background:'+(s.active?'#f0fdf4':'#fef2f2')+';border:1px solid '+(s.active?'#86efac':'#fca5a5')+'">';
     html+='<input type="checkbox" '+(s.active?'checked':'')+' onchange="SP.toggleStaff('+i+',this.checked)">';
-    html+='<span id="staff-name-'+i+'" style="flex:1;font-weight:600;font-size:.85rem;cursor:pointer" onclick="SP.editName('+i+')" title="Click to rename">'+s.name+'</span>';
+    html+='<button type="button" id="staff-name-'+i+'" class="staff-name-btn" style="flex:1;text-align:left;font-weight:600;font-size:.85rem;cursor:pointer;background:none;border:none;color:inherit;padding:0" onclick="SP.editName('+i+')" aria-label="Rename '+s.name+'" title="Click to rename">'+s.name+'</button>';
     // Night preference checkboxes (nurses: W1-W4, housekeeping: W1-W3 for 3 phases)
     if((tab==='nurses'&&s.role==='nurse')||(tab==='housekeeping'&&s.role==='housekeeping')){
       var np=s.nightPref||[];
@@ -1893,16 +1933,16 @@ function showSetup(){
       }
     }
     html+='<select style="font-size:.75rem" onchange="SP.changeRole('+i+',this.value)"><option value="nurse"'+(s.role==='nurse'?' selected':'')+'>Nurse</option><option value="housekeeping"'+(s.role==='housekeeping'?' selected':'')+'>HouseKeeping</option><option value="g-shift"'+(s.role==='g-shift'?' selected':'')+'>G-Shift</option></select>';
-    html+='<button class="btn" style="font-size:.65rem;padding:2px 5px" onclick="SP.editName('+i+')" title="Rename">✏️</button>';
-    html+='<button class="btn" style="font-size:.7rem;padding:2px 6px" onclick="SP.removeStaff('+i+')">x</button></div>';
+    html+='<button class="btn" style="font-size:.65rem;padding:2px 5px" onclick="SP.editName('+i+')" aria-label="Rename '+s.name+'" title="Rename"><span aria-hidden="true">✏️</span></button>';
+    html+='<button class="btn" style="font-size:.7rem;padding:2px 6px" onclick="SP.removeStaff('+i+')" aria-label="Remove '+s.name+'" title="Remove">x</button></div>';
   });
-  html+='</div><div style="display:flex;gap:.4rem;margin-bottom:1.5rem"><input type="text" id="new-name" placeholder="New staff name" style="flex:1;padding:.4rem;border:1px solid var(--border);border-radius:6px;font-size:.85rem"><button class="btn btn-primary" onclick="SP.addStaff()">Add</button></div>';
+  html+='</div><div style="display:flex;gap:.4rem;margin-bottom:1.5rem"><input type="text" id="new-name" placeholder="New staff name" aria-label="New staff name" style="flex:1;padding:.4rem;border:1px solid var(--border);border-radius:6px;font-size:.85rem"><button class="btn btn-primary" onclick="SP.addStaff()">Add</button></div>';
   html+='<h4 style="font-size:.85rem;color:#dc2626;margin-bottom:.3rem">Incompatible Pairs</h4><p style="font-size:.7rem;color:var(--text-light);margin-bottom:.5rem">Cannot be on same shift.</p>';
-  (staff.incompatiblePairs||[]).forEach(function(p,i){html+='<div style="font-size:.8rem;margin-bottom:.3rem"><span style="background:#fee2e2;padding:2px 6px;border-radius:4px">'+p[0]+' & '+p[1]+'</span> <button class="btn" style="font-size:.6rem;padding:1px 4px" onclick="SP.removePair('+i+')">x</button></div>'});
+  (staff.incompatiblePairs||[]).forEach(function(p,i){html+='<div style="font-size:.8rem;margin-bottom:.3rem"><span style="background:var(--pair-chip-bg);padding:2px 6px;border-radius:4px">'+p[0]+' & '+p[1]+'</span> <button class="btn" style="font-size:.6rem;padding:1px 4px" onclick="SP.removePair('+i+')" aria-label="Remove pair '+p[0]+' and '+p[1]+'" title="Remove pair">x</button></div>'});
   var names=team.filter(function(s){return s.role==='nurse'||s.role==='maid'}).map(function(s){return s.name});
-  html+='<div style="display:flex;gap:.3rem;margin-top:.4rem"><select id="pa" style="font-size:.75rem"><option value="">Select</option>';
+  html+='<div style="display:flex;gap:.3rem;margin-top:.4rem"><select id="pa" aria-label="Incompatible pair — first person" style="font-size:.75rem"><option value="">Select</option>';
   names.forEach(function(n){html+='<option>'+n+'</option>'});
-  html+='</select> & <select id="pb" style="font-size:.75rem"><option value="">Select</option>';
+  html+='</select> & <select id="pb" aria-label="Incompatible pair — second person" style="font-size:.75rem"><option value="">Select</option>';
   names.forEach(function(n){html+='<option>'+n+'</option>'});
   html+='</select><button class="btn" style="font-size:.75rem" onclick="SP.addPair()">Add</button></div>';
   html+='<div style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem"><h4 style="font-size:.85rem;color:var(--primary);margin-bottom:.5rem">Backup / Restore Staff Data</h4>';
@@ -1968,11 +2008,80 @@ function addPair(){var a=document.getElementById('pa').value,b=document.getEleme
 function removePair(i){var s=loadStaff();s.incompatiblePairs.splice(i,1);saveStaff(s);showSetup()}
 
 // ======= MODAL/ALERT =======
-function showModal(h){document.getElementById('modal-content').innerHTML=h;document.getElementById('modal-overlay').classList.add('show')}
-function closeModal(){document.getElementById('modal-overlay').classList.remove('show')}
-function closeAlert(){document.getElementById('alert-overlay').classList.remove('show');window._pending=null}
+// Accessibility: dialogs get role/aria-modal, move focus in, trap Tab, close on Esc, and restore
+// focus to the element that opened them (a11y audit S3).
+var _lastFocus=null;
+function _focusablesIn(el){
+  return Array.prototype.slice.call(el.querySelectorAll(
+    'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
+  )).filter(function(n){return !n.disabled&&n.offsetParent!==null});
+}
+function _openDialog(overlayId,contentId,labelId){
+  var overlay=document.getElementById(overlayId);
+  var content=document.getElementById(contentId);
+  _lastFocus=document.activeElement;
+  overlay.classList.add('show');
+  content.setAttribute('role','dialog');
+  content.setAttribute('aria-modal','true');
+  if(labelId)content.setAttribute('aria-labelledby',labelId);
+  // Move focus to the first focusable control (or the dialog itself).
+  var f=_focusablesIn(content);
+  if(f.length){f[0].focus();}else{content.setAttribute('tabindex','-1');content.focus();}
+}
+function _closeDialog(overlayId){
+  document.getElementById(overlayId).classList.remove('show');
+  if(_lastFocus&&typeof _lastFocus.focus==='function'){_lastFocus.focus();_lastFocus=null;}
+}
+function showModal(h){document.getElementById('modal-content').innerHTML=h;_openDialog('modal-overlay','modal-content')}
+function closeModal(){_closeDialog('modal-overlay')}
+function closeAlert(){document.getElementById('alert-overlay').classList.remove('show');window._pending=null;if(_lastFocus&&_lastFocus.focus){_lastFocus.focus();_lastFocus=null}}
 document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal()});
 document.getElementById('alert-overlay').addEventListener('click',function(e){if(e.target===this)closeAlert()});
+
+// Esc closes an open dialog; Tab is trapped within the visible dialog.
+document.addEventListener('keydown',function(e){
+  var modal=document.getElementById('modal-overlay');
+  var alert=document.getElementById('alert-overlay');
+  var openOverlay=(alert&&alert.classList.contains('show'))?alert:(modal&&modal.classList.contains('show'))?modal:null;
+  if(!openOverlay)return;
+  if(e.key==='Escape'){e.preventDefault();(openOverlay===alert)?closeAlert():closeModal();return;}
+  if(e.key==='Tab'){
+    var content=openOverlay.querySelector('.modal,.alert-box,#modal-content,#alert-content')||openOverlay;
+    var f=_focusablesIn(content);if(!f.length)return;
+    var first=f[0],last=f[f.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  }
+});
+
+// Global keyboard activation: any element with role="button" (that isn't a native <button> or an
+// editable cell) responds to Enter/Space like a real button (a11y audit B1-B4). Manual-mode
+// contenteditable cells manage their own keys, so they're excluded.
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter'&&e.key!==' '&&e.key!=='Spacebar')return;
+  var el=e.target;
+  if(!el||el.getAttribute('role')!=='button')return;
+  if(el.tagName==='BUTTON'||el.tagName==='A')return;             // native handling
+  if(el.isContentEditable||el.getAttribute('contenteditable')==='true')return; // manual-mode cell
+  e.preventDefault();
+  el.click();
+});
+
+// ======= LIVE REGIONS (screen-reader announcements) — a11y audit S7 =======
+// Polite region for routine feedback; assertive region for errors/rejections (S-b).
+function announce(msg){
+  var el=document.getElementById('sr-live');
+  if(!el)return;
+  // Clear then set so identical consecutive messages are still announced.
+  el.textContent='';
+  setTimeout(function(){el.textContent=msg;},30);
+}
+function announceError(msg){
+  var el=document.getElementById('sr-live-assertive');
+  if(!el){announce(msg);return;}
+  el.textContent='';
+  setTimeout(function(){el.textContent=msg;},30);
+}
 
 // ======= INIT =======
 // Month picker: current month + next 6 months only (no past months in the default list).
@@ -2010,6 +2119,19 @@ buildMonthSelect();
 renderOrgName();
 (function renderVersion(){var el=document.getElementById('app-version');if(el)el.textContent='v'+APP_VERSION;})();
 render();
+
+// Tablist arrow-key navigation (a11y B1): Left/Right (and Up/Down) move between tabs + activate.
+(function wireTabKeys(){
+  var tl=document.querySelector('.tabs[role="tablist"]');if(!tl)return;
+  tl.addEventListener('keydown',function(e){
+    if(['ArrowRight','ArrowDown','ArrowLeft','ArrowUp'].indexOf(e.key)<0)return;
+    e.preventDefault();
+    var next=(state.currentTab==='nurses')?'housekeeping':'nurses';
+    switchTab(next);
+    var id=(next==='nurses')?'tab-nurses':'tab-housekeeping';
+    var el=document.getElementById(id);if(el)el.focus();
+  });
+})();
 
 // ======= HIGHLIGHT SYSTEM =======
 var hlState={names:[],shifts:[]}; // multi-select: names=['SAROJA'], shifts=[{name:'SAROJA',shift:'M'}]
@@ -2158,27 +2280,262 @@ document.addEventListener('click',function(e){
   clearHighlight();
 });
 
-// ======= SHARE / PRINT (Save as PDF) =======
-// One reliable path for all platforms. The browser's print dialog is the cross-platform way to
-// "Save as PDF" and share:
-//   • iPhone/iPad (Safari): opens the iOS print/share sheet → Save to Files (PDF), WhatsApp,
-//     AirPrint, etc. A bare window.print() can no-op on iOS, so we call it directly in the click
-//     (user-gesture) context and clean up on the afterprint event rather than a racy timeout.
-//   • Android (Chrome): print dialog with a "Save as PDF" destination + Share.
-//   • Desktop: Save as PDF / printer.
+// ======= SHARE / PRINT (real PDF) — v4.4.0 =======
+// We build a REAL PDF client-side (jsPDF + jspdf-autotable, vendored locally, precached, offline)
+// and then Share or download it. Why not window.print()? A bare window.print() is a silent no-op
+// inside an iOS installed PWA (standalone WebKit has no print pipeline), which is exactly how the
+// primary user runs the app. The Web Share API can share a file we've already generated, so we
+// generate the PDF and hand it to navigator.share() (native sheet → WhatsApp/Files/Print) with a
+// download fallback on desktop, and the legacy window.print() as a last-resort error fallback.
+
+// Light-theme shift-cell colours (the PDF is always light, matching the print-stays-light rule).
+// Each entry: [ [bgR,bgG,bgB], [fgR,fgG,fgB] ]. Kept in sync with the CSS --sh-*-bg/fg tokens.
+var PDF_SHIFT_COLORS={
+  M :[[219,234,254],[30,64,175]],  G :[[220,252,231],[22,101,52]],
+  A :[[255,247,237],[154,52,18]],  N :[[241,245,249],[15,23,42]],
+  O :[[254,226,226],[185,28,28]],  PL:[[237,233,254],[91,33,182]],
+  MA:[[219,234,254],[124,45,18]],  AN:[[241,245,249],[71,85,105]]
+};
+var PDF_COV={ok:[220,252,231],warn:[254,243,199],danger:[254,226,226]};
+
+// Build the rota + summary as a real PDF and return a Blob. Throws if the libs didn't load.
+function generatePdfBlob(tab){
+  if(!window.jspdf||!window.jspdf.jsPDF)throw new Error('PDF library not loaded');
+  var jsPDF=window.jspdf.jsPDF;
+  var doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  if(typeof doc.autoTable!=='function')throw new Error('autoTable plugin not loaded');
+
+  var y=state.currentYear,m=state.currentMonth;
+  var days=getDays(y,m),rota=loadRota(y,m,tab),staff=loadStaff();
+  var team=(staff[tab]||[]).filter(function(s){return s.active});
+  if(!rota||!team.length)throw new Error('Nothing to export');
+  var nur=team.filter(function(s){return s.role==='nurse'||s.role==='housekeeping'});
+  var covTarget=(tab==='housekeeping')?1:2;
+  var pageW=doc.internal.pageSize.getWidth();
+  var MX=8; // page side margin (mm)
+
+  // ===== Header card (boxed): app name + version, org line, tab + shift legend =====
+  // Mirrors the on-screen/old-PDF header card. Drawn manually, then the grid starts below it.
+  var cardX=MX, cardY=8, cardW=pageW-MX*2;
+  var padX=3;
+  // Row 1: "ShiftPlanner v4.4.0" (left)  +  "ROTA FOR THE MONTH OF <MONTH> <YEAR>" (centred)
+  var r1Y=cardY+6;
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(79,70,229);
+  doc.text('ShiftPlanner',cardX+padX,r1Y);
+  var spW=doc.getTextWidth('ShiftPlanner');
+  doc.setFontSize(6);doc.setTextColor(107,118,133);
+  doc.text('v'+(APP_VERSION||'').replace('-proto',''),cardX+padX+spW+1.5,r1Y-2.5);
+  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(139,105,20);
+  doc.text('ROTA FOR THE MONTH OF '+MONTH_NAMES[m].toUpperCase()+' '+y,pageW/2,r1Y,{align:'center'});
+  // Row 2: org name (or placeholder) in muted italic
+  var r2Y=r1Y+5;
+  var orgName=loadOrgName();
+  doc.setFont('helvetica','italic');doc.setFontSize(8);doc.setTextColor(107,118,133);
+  doc.text(orgName||'(organisation name not set)',cardX+padX,r2Y);
+  // Row 3: tab label (bold) + shift legend chips
+  var r3Y=r2Y+6;
+  var tabLabel=tab==='nurses'?'Nurses':'HouseKeeping';
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(30,41,59);
+  doc.text(tabLabel,cardX+padX,r3Y);
+  // Legend chips
+  var legX=cardX+padX+doc.getTextWidth(tabLabel)+6;
+  var legend=['M','G','A','N','O','PL','MA','AN'];
+  doc.setFontSize(7);
+  legend.forEach(function(code){
+    var col=PDF_SHIFT_COLORS[code];
+    var label=SHIFT_LABELS[code]||code;
+    // small coloured code box
+    if(col){doc.setFillColor(col[0][0],col[0][1],col[0][2]);doc.setDrawColor(203,213,225);
+      doc.roundedRect(legX,r3Y-3,4.5,4,0.5,0.5,'FD');
+      doc.setTextColor(col[1][0],col[1][1],col[1][2]);doc.setFont('helvetica','bold');
+      doc.text(code,legX+2.25,r3Y,{align:'center'});}
+    legX+=5.5;
+    doc.setTextColor(60,60,60);doc.setFont('helvetica','normal');
+    doc.text(label,legX,r3Y);
+    legX+=doc.getTextWidth(label)+5;
+  });
+  var cardH=r3Y-cardY+4;
+  // Draw the card border last (so text sits inside it)
+  doc.setDrawColor(203,213,225);doc.setLineWidth(0.4);
+  doc.roundedRect(cardX,cardY,cardW,cardH,1.5,1.5,'S');
+
+  var gridStartY=cardY+cardH+2;
+
+  // ===== Rota grid: two header rows (coverage-coloured DOW row + date row) =====
+  var covRow=[{content:'',styles:{fillColor:[255,255,255]}}]; // corner (top) — Date label drawn in hook
+  var dateRow=[{content:'',styles:{fillColor:[248,246,240]}}]; // corner (bottom) — Name label drawn in hook
+  for(var d=1;d<=days;d++){
+    var dow=getDow(y,m,d);
+    var cov={M:0,A:0,N:0};
+    nur.forEach(function(n){var s=rota[n.name]?rota[n.name][d-1]:'';
+      if(s==='M')cov.M++;else if(s==='A')cov.A++;else if(s==='N')cov.N++;
+      else if(s==='MA'){cov.M++;cov.A++}else if(s==='AN'){cov.A++;cov.N++}});
+    var minCov=Math.min(cov.M,cov.A,cov.N);
+    var covFill=(minCov>=covTarget)?PDF_COV.ok:(minCov>=1?PDF_COV.warn:PDF_COV.danger);
+    var isSun=(dow===0);
+    covRow.push({content:DAY_NAMES[dow],styles:{fillColor:covFill,halign:'center',
+      textColor:isSun?[220,38,38]:[30,41,59],fontStyle:'bold'}});
+    dateRow.push({content:String(d),styles:{fillColor:covFill,halign:'center',
+      textColor:isSun?[220,38,38]:[30,41,59],fontStyle:'bold'}});
+  }
+
+  // --- Rota body: one row per staff member, coloured shift cells ---
+  var body=[];
+  team.forEach(function(p){
+    var row=[{content:p.name,styles:{fillColor:[248,246,240],textColor:[30,41,59],fontStyle:'bold',halign:'left'}}];
+    for(var d=0;d<days;d++){
+      var s=rota[p.name]?(rota[p.name][d]||'-'):'-';
+      var col=PDF_SHIFT_COLORS[s];
+      var cell={content:s,styles:{halign:'center'}};
+      if(col){cell.styles.fillColor=col[0];cell.styles.textColor=col[1];
+        if(s==='O'||s==='PL')cell.styles.fontStyle='bold';}
+      else{cell.styles.textColor=[100,116,139];} // '-' empty
+      row.push(cell);
+    }
+    body.push(row);
+  });
+
+  doc.autoTable({
+    head:[covRow,dateRow],
+    body:body,
+    startY:gridStartY,
+    margin:{left:MX,right:MX},
+    theme:'grid',
+    styles:{fontSize:7,cellPadding:0.8,lineColor:[148,163,184],lineWidth:0.2,
+      halign:'center',valign:'middle',overflow:'hidden'},
+    headStyles:{fontSize:7,cellPadding:0.6},
+    columnStyles:{0:{cellWidth:22,halign:'left'}},
+    tableWidth:'auto',
+    // Draw the diagonal split in the corner cell (row 0, col 0): "Date" top-right, "Name" bottom-left.
+    // Wrapped in try/catch: a throw inside an autotable hook would abort the whole PDF and drop us
+    // to the legacy print fallback — the corner decoration must fail soft, not sink generation.
+    didDrawCell:function(data){
+      try{
+        if(data.section==='head'&&data.column.index===0&&data.row.index===0){
+          var c=data.cell;
+          doc.setDrawColor(148,163,184);doc.setLineWidth(0.2);
+          doc.line(c.x,c.y,c.x+c.width,c.y+c.height); // diagonal
+          doc.setFont('helvetica','bold');doc.setFontSize(6);doc.setTextColor(30,41,59);
+          doc.text('Date',c.x+c.width-1.5,c.y+2.5,{align:'right'});
+        }
+        if(data.section==='head'&&data.column.index===0&&data.row.index===1){
+          var c2=data.cell;
+          doc.setFont('helvetica','bold');doc.setFontSize(6);doc.setTextColor(30,41,59);
+          doc.text('Name',c2.x+1.5,c2.y+c2.height-1.5);
+        }
+      }catch(e){/* non-fatal: skip corner decoration */}
+    }
+  });
+
+  // Heavy outer border around the whole rota table (matches old 3px frame).
+  // Guarded: a border glitch must never sink the whole PDF (that silently dropped us to the
+  // legacy window.print() fallback during testing). Compute width robustly and validate before rect.
+  try{
+    var t=doc.lastAutoTable;
+    if(t){
+      // autotable 3.x doesn't expose t.width reliably; sum the actual column widths instead.
+      var tblW=0;
+      if(t.columns&&t.columns.length){t.columns.forEach(function(col){tblW+=(col.width||0)});}
+      if(!tblW){tblW=pageW-MX*2;} // fallback: full content width
+      var bx=MX, by=t.startY, bw=tblW, bh=t.finalY-t.startY;
+      if([bx,by,bw,bh].every(function(v){return typeof v==='number'&&isFinite(v)})&&bw>0&&bh>0){
+        doc.setDrawColor(30,41,59);doc.setLineWidth(0.7);
+        doc.rect(bx,by,bw,bh,'S');
+      }
+    }
+  }catch(e){/* non-fatal: skip the decorative outer border if geometry is unavailable */}
+
+  // ===== Shift Count summary (compact, left-aligned, per-shift coloured headers) =====
+  var afterY=doc.lastAutoTable.finalY+6;
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(139,105,20);
+  doc.text('Shift Count',MX,afterY);
+  var sumCols=['Name','G','M','MA','A','AN','N','O','PL','Total'];
+  var sumHead=[sumCols.map(function(code){
+    if(code==='Name'||code==='Total')
+      return {content:code,styles:{fillColor:[248,246,240],textColor:[30,41,59],fontStyle:'bold'}};
+    var col=PDF_SHIFT_COLORS[code];
+    return {content:code,styles:{fillColor:col?col[0]:[248,246,240],textColor:col?col[1]:[30,41,59],fontStyle:'bold'}};
+  })];
+  var sumBody=[];
+  team.forEach(function(p){
+    var c={M:0,G:0,A:0,N:0,MA:0,AN:0,O:0,PL:0};
+    (rota[p.name]||[]).forEach(function(s){if(s==='MA'){c.MA++}else if(s==='AN'){c.AN++}else if(c.hasOwnProperty(s))c[s]++});
+    var tot=c.G+c.M+c.MA+c.A+c.AN+c.N+c.O+c.PL;
+    sumBody.push([p.name,c.G,c.M,c.MA,c.A,c.AN,c.N,c.O,c.PL,tot]);
+  });
+  doc.autoTable({
+    head:sumHead,body:sumBody,startY:afterY+2,margin:{left:MX,right:MX},theme:'grid',
+    tableWidth:'wrap', // compact — sized to content, left-aligned (like the old PDF)
+    styles:{fontSize:8,cellPadding:1,lineColor:[148,163,184],lineWidth:0.2,halign:'center'},
+    columnStyles:{0:{halign:'left',fontStyle:'bold',cellWidth:26},9:{fontStyle:'bold',fillColor:[250,246,236]}}
+  });
+
+  // --- Footer note ---
+  var noteY=doc.lastAutoTable.finalY+6;
+  doc.setFont('helvetica','italic');doc.setFontSize(7);doc.setTextColor(91,102,117);
+  doc.text('NOTE: Shifts may change for coverage. Mutual swaps must be informed to the incharge.',MX,noteY);
+
+  return doc.output('blob');
+}
+
+// Adaptive Share / Print: generate the PDF, then Share it (native sheet) or download it; on any
+// failure fall back to the legacy browser print path so the button never dead-ends.
 function exportPDF(){
   var tab=state.currentTab;
   var tabLabel=tab==='nurses'?'Nurses':'HouseKeeping';
   var monthName=MONTH_NAMES[state.currentMonth];
   var year=state.currentYear;
-  var origTitle=document.title;
-  // Document title becomes the default PDF filename in the Save/Share dialog.
-  document.title='ShiftPlanner '+tabLabel+' '+monthName+' '+year;
-  // Mobile PDF fix: add .printing so the un-clip CSS applies to the on-screen layout too —
-  // mobile browsers don't reliably honour @media print and would otherwise capture only the
-  // visible slice of the horizontally-scrolled table.
-  document.body.classList.add('printing');
+  var filename='ShiftPlanner '+tabLabel+' '+monthName+' '+year+'.pdf';
 
+  var blob;
+  try{
+    blob=generatePdfBlob(tab);
+  }catch(err){
+    if(err&&/Nothing to export/.test(err.message)){showToast('Generate a rota first');return;}
+    // PDF generation failed (e.g. libs didn't load) → fall back to the legacy browser print path.
+    showToast('PDF unavailable — using print');
+    printFallback(tabLabel,monthName,year);
+    return;
+  }
+
+  var file=null;
+  try{file=new File([blob],filename,{type:'application/pdf'});}catch(e){/* older browsers: no File ctor */}
+
+  // Choose behaviour by device (matches the "Save / Share" label + user expectation):
+  //   • Mobile / touch (incl. the installed iPhone PWA) → native SHARE sheet (WhatsApp, Files,
+  //     Print). This is the whole reason for the feature — window.print() is a no-op there.
+  //   • Desktop → straight DOWNLOAD to the Downloads folder (the "Save" half). Desktop browsers
+  //     support the file-share API too, but a share panel is an unwanted extra step there;
+  //     desktop users expect the file to just save.
+  if(isMobileDevice()&&file&&navigator.canShare&&navigator.canShare({files:[file]})&&navigator.share){
+    navigator.share({files:[file],title:filename.replace(/\.pdf$/,'')}).catch(function(err){
+      // User cancelled (AbortError) → do nothing. Any other failure → fall back to download.
+      if(err&&err.name==='AbortError')return;
+      downloadBlob(blob,filename);
+    });
+    return;
+  }
+
+  // Desktop (or any device without file-share) → download the PDF.
+  downloadBlob(blob,filename);
+}
+
+// Treat phones/tablets (coarse pointer, no fine hover) as "mobile" for export routing. This is
+// deliberately conservative: only genuine touch devices get the share sheet; laptops/desktops
+// (including touchscreen laptops, which also report a fine pointer) get a clean download.
+function isMobileDevice(){
+  try{
+    if(window.matchMedia&&window.matchMedia('(pointer: coarse)').matches&&!window.matchMedia('(pointer: fine)').matches)return true;
+  }catch(e){}
+  return /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle|BlackBerry|Opera Mini|IEMobile/i.test(navigator.userAgent||'');
+}
+
+// Legacy browser-print path — retained only as the error fallback and for desktop users who
+// prefer the system print dialog. (Was the whole export mechanism pre-v4.4.0.)
+function printFallback(tabLabel,monthName,year){
+  var origTitle=document.title;
+  document.title='ShiftPlanner '+tabLabel+' '+monthName+' '+year;
+  document.body.classList.add('printing');
   var cleaned=false;
   function cleanup(){
     if(cleaned)return;cleaned=true;
@@ -2186,12 +2543,8 @@ function exportPDF(){
     document.body.classList.remove('printing');
     window.removeEventListener('afterprint',cleanup);
   }
-  // Clean up when the print/share sheet closes (reliable on iOS + desktop). Fallback timeout
-  // covers browsers that don't fire afterprint.
   window.addEventListener('afterprint',cleanup);
   setTimeout(cleanup,60000);
-
-  // Call print synchronously in the user gesture (important for iOS Safari).
   window.print();
 }
 
@@ -2291,5 +2644,5 @@ function importStaff(input){
 }
 
 // ======= PUBLIC API =======
-window.SP={version:APP_VERSION,toggleTheme:toggleTheme,setTheme:setTheme,changeMonth:changeMonth,switchTab:switchTab,generateRota:generateRota,manualRota:manualRota,showCustomDate:showCustomDate,applyCustomDate:applyCustomDate,showAddOff:showAddOff,applyAddOff:applyAddOff,editShift:editShift,applyShift:applyShift,confirmShift:confirmShift,saveManual:saveManual,undoLast:undoLast,showSetup:showSetup,toggleStaff:toggleStaff,changeRole:changeRole,removeStaff:removeStaff,addStaff:addStaff,editName:editName,editOrgName:editOrgName,setNightPref:setNightPref,addPair:addPair,removePair:removePair,closeModal:closeModal,closeAlert:closeAlert,hlName:hlName,hlShift:hlShift,hlAllNames:hlAllNames,hlAllShift:hlAllShift,clearHighlight:clearHighlight,exportPDF:exportPDF,exportStaff:exportStaff,importStaff:importStaff,copySel:function(){copySelection(false)},cutSel:function(){copySelection(true)},pasteSel:pasteFromClipboard,clearSel:clearSelection};
+window.SP={version:APP_VERSION,toggleTheme:toggleTheme,setTheme:setTheme,changeMonth:changeMonth,switchTab:switchTab,generateRota:generateRota,manualRota:manualRota,showCustomDate:showCustomDate,applyCustomDate:applyCustomDate,showAddOff:showAddOff,applyAddOff:applyAddOff,editShift:editShift,applyShift:applyShift,confirmShift:confirmShift,saveManual:saveManual,undoLast:undoLast,showSetup:showSetup,toggleStaff:toggleStaff,changeRole:changeRole,removeStaff:removeStaff,addStaff:addStaff,editName:editName,editOrgName:editOrgName,setNightPref:setNightPref,addPair:addPair,removePair:removePair,closeModal:closeModal,closeAlert:closeAlert,hlName:hlName,hlShift:hlShift,hlAllNames:hlAllNames,hlAllShift:hlAllShift,clearHighlight:clearHighlight,exportPDF:exportPDF,generatePdfBlob:generatePdfBlob,exportStaff:exportStaff,importStaff:importStaff,copySel:function(){copySelection(false)},cutSel:function(){copySelection(true)},pasteSel:pasteFromClipboard,clearSel:clearSelection};
 })();

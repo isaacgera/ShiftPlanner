@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ShiftPlanner — PWA Screenshot Generator</title>
+<style>
+  body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#faf8f4;color:#1e293b;line-height:1.5;max-width:860px;margin:0 auto;padding:1.5rem}
+  h1{color:#4f46e5;font-size:1.3rem}
+  p{color:#475569}
+  .card{border:1px solid #e5e0d0;border-radius:10px;padding:1rem;background:#fff;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.04);margin:1.2rem 0}
+  .card canvas{border:1px solid #eee;max-width:100%;height:auto}
+  .card h3{font-size:.95rem;margin:.5rem 0 .2rem}
+  .card small{color:#64748b}
+  button{margin-top:.6rem;padding:.5rem .9rem;border:1px solid #4f46e5;border-radius:6px;background:#4f46e5;color:#fff;cursor:pointer;font-size:.85rem}
+  button:hover{opacity:.9}
+  .note{background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:.8rem 1rem;font-size:.9rem}
+  code{background:#f1f5f9;padding:.1rem .35rem;border-radius:4px;font-size:.85em}
+</style>
+</head>
+<body>
+<h1>ShiftPlanner PWA Screenshot Generator</h1>
+<p>Generates the two manifest screenshots that enable the richer PWA install UI. Click each
+   <strong>Download</strong> button and save the file into this <code>screenshots/</code> folder with
+   the exact filename shown (the manifest references these exact names + sizes).</p>
+
+<div class="note">
+  Files to produce (save into <code>screenshots/</code>):
+  <ul>
+    <li><code>screenshot-wide.png</code> — 1280&times;720, <code>form_factor: "wide"</code> (desktop install UI)</li>
+    <li><code>screenshot-narrow.png</code> — 720&times;1280, narrow (mobile install UI)</li>
+  </ul>
+</div>
+
+<div id="cards"></div>
+
+<script>
+// Palette (light theme tokens, matching the app)
+var C = {
+  bg:'#faf8f4', surface:'#fff', surfaceAlt:'#f8f6f0', border:'#e5e0d0',
+  primary:'#4f46e5', accent:'#8B6914', text:'#1e293b', textLight:'#5b6675',
+  shM:['#dbeafe','#1e40af'], shG:['#dcfce7','#166534'], shA:['#fff7ed','#9a3412'],
+  shN:['#f1f5f9','#0f172a'], shO:['#fee2e2','#b91c1c'], shPL:['#ede9fe','#5b21b6'],
+  covOk:'#dcfce7', covWarn:'#fef3c7'
+};
+
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+// Draw a representative ShiftPlanner screen. `wide` toggles desktop vs mobile layout density.
+function drawScreen(ctx, W, H, wide){
+  ctx.fillStyle = C.bg; ctx.fillRect(0,0,W,H);
+  var pad = wide ? 28 : 16;
+
+  // ---- Header card ----
+  var hx = pad, hy = pad, hw = W - pad*2, hh = wide ? 96 : 132;
+  ctx.fillStyle = C.surface; ctx.strokeStyle = C.border; ctx.lineWidth = 1;
+  roundRect(ctx, hx, hy, hw, hh, 10); ctx.fill(); ctx.stroke();
+
+  // Title + version
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = C.primary;
+  ctx.font = '700 ' + (wide?26:22) + 'px system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('ShiftPlanner', hx+18, hy+38);
+  ctx.fillStyle = C.textLight;
+  ctx.font = '600 11px system-ui, sans-serif';
+  ctx.fillText('v4.4.0', hx+18 + ctx.measureText('ShiftPlanner').width*0 + (wide?150:126), hy+26);
+  // Org name (own line, muted)
+  ctx.fillStyle = C.textLight;
+  ctx.font = '400 13px system-ui, sans-serif';
+  ctx.fillText('Sanctum Natural Birth Centre', hx+18, hy+58);
+
+  // Month title (centre-ish)
+  ctx.fillStyle = C.accent;
+  ctx.font = '700 ' + (wide?16:13) + 'px system-ui, sans-serif';
+  ctx.textAlign = wide ? 'center' : 'left';
+  ctx.fillText('ROTA FOR THE MONTH OF SEPTEMBER 2026', wide?W/2:hx+18, wide?hy+34:hy+80);
+
+  // Tabs (Nurses active)
+  ctx.textAlign = 'left';
+  var tabY = hy + hh - (wide?30:34);
+  drawPill(ctx, hx+18, tabY, 62, 22, C.primary, '#fff', 'Nurses');
+  drawPill(ctx, hx+18+70, tabY, 104, 22, C.surface, C.text, 'HouseKeeping', C.border);
+
+  // ---- Rota grid ----
+  var gx = pad, gy = hy + hh + pad, gw = W - pad*2;
+  var names = ['SAROJA','VASANTHA','PUNNAMMA','SUVARNA','SANDHYA','SHAILAJA','VIJAYA','JAYA'];
+  var cols = wide ? 16 : 10;                 // day columns shown
+  var nameW = wide ? 96 : 78;
+  var cellW = (gw - nameW) / cols;
+  var rowH = wide ? 30 : 26;
+  var headH = rowH;
+  var gh = headH + names.length*rowH;
+
+  // container
+  ctx.fillStyle = C.surface; ctx.strokeStyle = C.border;
+  roundRect(ctx, gx, gy, gw, gh, 10); ctx.fill(); ctx.stroke();
+
+  // header row (coverage-coloured)
+  var shifts = ['M','A','N','O','G','MA','PL'];
+  ctx.font = '600 ' + (wide?12:10) + 'px system-ui, sans-serif';
+  ctx.textBaseline = 'middle';
+  for(var c=0;c<cols;c++){
+    var cx = gx + nameW + c*cellW;
+    ctx.fillStyle = (c%5===0)?C.covWarn:C.covOk;
+    ctx.fillRect(cx, gy, cellW, headH);
+    ctx.strokeStyle = C.border; ctx.strokeRect(cx, gy, cellW, headH);
+    ctx.fillStyle = (c%7===0)?'#dc2626':C.text;
+    ctx.textAlign = 'center';
+    ctx.fillText(String(c+1), cx+cellW/2, gy+headH/2);
+  }
+  // corner
+  ctx.fillStyle = C.surfaceAlt; ctx.fillRect(gx, gy, nameW, headH);
+  ctx.strokeStyle = C.border; ctx.strokeRect(gx, gy, nameW, headH);
+
+  // body rows
+  var pat = [
+    ['N','N','M','M','A','A','O','M','M','A','N','N','M','A','O','M'],
+    ['M','A','O','A','M','M','N','N','A','O','M','A','A','N','N','M'],
+    ['A','M','M','O','N','N','A','A','M','M','O','N','N','A','M','A'],
+    ['O','A','A','N','N','M','M','O','A','A','M','M','N','N','A','O'],
+    ['M','M','N','N','A','O','A','M','N','N','A','A','O','M','M','N'],
+    ['A','O','A','M','M','A','N','N','O','M','M','A','A','O','N','N'],
+    ['N','N','O','A','A','M','M','A','A','O','N','N','M','M','A','A'],
+    ['G','G','G','G','G','G','O','G','G','G','G','G','G','O','G','G']
+  ];
+  for(var r=0;r<names.length;r++){
+    var ry = gy + headH + r*rowH;
+    // name cell
+    ctx.fillStyle = C.surface; ctx.fillRect(gx, ry, nameW, rowH);
+    ctx.strokeStyle = C.border; ctx.strokeRect(gx, ry, nameW, rowH);
+    ctx.fillStyle = C.text; ctx.font = '600 ' + (wide?12:10) + 'px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(names[r], gx+6, ry+rowH/2);
+    // shift cells
+    ctx.textAlign = 'center'; ctx.font = '600 ' + (wide?12:10) + 'px system-ui, sans-serif';
+    for(var c2=0;c2<cols;c2++){
+      var code = pat[r][c2%pat[r].length];
+      var col = shiftColour(code);
+      var cx2 = gx + nameW + c2*cellW;
+      ctx.fillStyle = col[0]; ctx.fillRect(cx2, ry, cellW, rowH);
+      ctx.strokeStyle = C.border; ctx.strokeRect(cx2, ry, cellW, rowH);
+      ctx.fillStyle = col[1]; ctx.fillText(code, cx2+cellW/2, ry+rowH/2);
+    }
+  }
+
+  // caption strip at the very bottom
+  ctx.fillStyle = C.textLight;
+  ctx.font = 'italic 400 ' + (wide?12:11) + 'px system-ui, sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('Staff scheduling for Nurses & HouseKeeping — auto-generate or hand-build monthly rotas.', gx, gy+gh+26);
+}
+
+function shiftColour(code){
+  switch(code){
+    case 'M': return C.shM; case 'A': return C.shA; case 'N': return C.shN;
+    case 'O': return C.shO; case 'G': return C.shG; case 'PL': return C.shPL;
+    case 'MA': return C.shM; default: return ['#ffffff', C.text];
+  }
+}
+function drawPill(ctx,x,y,w,h,bg,fg,label,stroke){
+  roundRect(ctx,x,y,w,h,6); ctx.fillStyle=bg; ctx.fill();
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}
+  ctx.fillStyle=fg; ctx.font='600 12px system-ui, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(label, x+w/2, y+h/2);
+  ctx.textBaseline='alphabetic';
+}
+
+var specs = [
+  { w:1280, h:720,  wide:true,  file:'screenshot-wide.png',   label:'Wide (desktop) 1280×720' },
+  { w:720,  h:1280, wide:false, file:'screenshot-narrow.png', label:'Narrow (mobile) 720×1280' }
+];
+
+var container = document.getElementById('cards');
+specs.forEach(function(spec){
+  var card = document.createElement('div'); card.className='card';
+  var canvas = document.createElement('canvas');
+  canvas.width = spec.w; canvas.height = spec.h;
+  drawScreen(canvas.getContext('2d'), spec.w, spec.h, spec.wide);
+  var h3 = document.createElement('h3'); h3.textContent = spec.label;
+  var small = document.createElement('small'); small.textContent = spec.file;
+  var btn = document.createElement('button'); btn.textContent = 'Download ' + spec.file;
+  btn.onclick = function(){
+    canvas.toBlob(function(blob){
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = spec.file; a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+    }, 'image/png');
+  };
+  card.appendChild(canvas); card.appendChild(document.createElement('br'));
+  card.appendChild(h3); card.appendChild(small); card.appendChild(document.createElement('br')); card.appendChild(btn);
+  container.appendChild(card);
+});
+</script>
+</body>
+</html>
