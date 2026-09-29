@@ -15,6 +15,13 @@ The app is a single-folder, zero-dependency vanilla JS web application designed 
   (tracked as tech debt).
 - **UI/UX stack:** Vanilla HTML/CSS/JS, no framework and **no build step** — chosen so the app runs
   on a non-technical user's device with zero tooling and works offline.
+  - **One vendored runtime dependency (v4.4.0):** jsPDF + jspdf-autotable, for real client-side PDF
+    generation (see Export / Share). This is a deliberate, scoped departure from "zero
+    dependencies": the files are **vendored locally** into `vendor/` (pinned versions, no CDN, no
+    npm/bundler) and **precached by the service worker**, so the no-build and offline-first
+    guarantees are preserved. Justification: a bare `window.print()` is a silent no-op in the iOS
+    installed PWA, and the Web Share API can only share a file we have already generated — a real
+    PDF is the only way to make Share/Print reliable on the primary target device.
 - **Target platforms:** Installable PWA — desktop and mobile web, responsive, offline-capable;
   hosted on GitHub Pages.
 - **Data & privacy:** Local-first. All data stays on the device (localStorage + JSON/CSV export);
@@ -337,16 +344,39 @@ If no one is off (all 7 working): extra nurse assigned to M or A (making it 3M+2
 - Last dropdown entry **"Custom date…"** opens a month/year dialog for any past/future month
 - A custom selection appears in the dropdown tagged "(custom)"
 
-### Export
-- **PDF:** via browser print, A4 Landscape, 0.8cm margins
-  - Filename: `ShiftPlanner <Tab> <Month> <Year>` — set via `document.title` manipulation before
-    `window.print()`. This is a **best-effort suggestion only**: browsers use the document title as
-    the default save-as name, but the actual filename is browser-dependent and the user can override
-    it in the print/save dialog. Not a guaranteed output.
-  - Print shows: header, org name, active tab, legend, rota + summary
-  - Hidden: Generate/Save/Undo/Staff Setup/Export PDF buttons, inactive tab
-  - Uniform 1.5px borders, 3px outer border
-- **Staff Export:** JSON and CSV from Staff Setup modal
+### Export / Share (Share / Print) — v4.4.0
+
+The **Share / Print** button produces a **real, generated PDF** of the active tab's rota and shares
+or saves it. This replaced the previous `window.print()`-only path because a bare `window.print()`
+is a **silent no-op inside an iOS installed PWA** (standalone WebKit has no print pipeline), so
+Suneetha — who runs ShiftPlanner as an installed PWA on iPhone — could not export at all from the
+home-screen app (it only worked in a Safari/Chrome tab).
+
+- **PDF is built client-side** with a locally-vendored library (jsPDF + jspdf-autotable) — no
+  server, no CDN, no build step. The PDF is reconstructed from the rota data (not a screenshot), so
+  text is sharp and selectable and the file is small.
+- **A4 Landscape.** Contents mirror the on-screen/print rota: org name + month title header, the
+  active tab's colour-coded rota grid (shift-cell colours preserved, Sunday columns marked), the
+  Shift Count summary table, and the standing "shifts may change for coverage" note. The
+  "Powered by Forjé" credit is **excluded** (consistent with the existing print exclusion).
+- **Adaptive delivery** (one button, behaviour chosen at runtime):
+  1. **Can share files** (`navigator.canShare({files:[pdf]})` true — modern iOS/Android incl.
+     installed PWA) → `navigator.share({files})` opens the native share sheet (WhatsApp, Files,
+     Mail, AirPrint/Print). This is the path that fixes the iOS-PWA case.
+  2. **Cannot share files** (typical desktop) → trigger a normal **download** of the PDF blob
+     (`<a download>`), which saves to Files on iOS or downloads on desktop.
+  3. Generation/library failure → graceful fallback to the legacy `window.print()` path + a toast,
+     so the button never dead-ends.
+- **Filename:** `ShiftPlanner <Tab> <Month> <Year>.pdf`. For the download path this is the actual
+  filename; for the share path it is the suggested name passed to the OS share sheet (the target
+  app/user may rename).
+- **Offline:** the vendored library is precached by the service worker, so PDF export works fully
+  offline — no network dependency at runtime.
+- **Staff Export:** JSON and CSV from Staff Setup modal (unchanged).
+
+> Note: the older `window.print()` / `@media print` path is retained as the failure fallback and for
+> desktop users who prefer the system print dialog. The mobile-clip fix (`.printing` class) and the
+> print-stays-light token reset still apply on that path.
 
 ### Persistence
 - All data in localStorage (survives refresh)
@@ -365,21 +395,30 @@ If no one is off (all 7 working): extra nurse assigned to M or A (making it 3M+2
 - PNG icons (192, 512, maskable-512) for install-banner support, with SVG icons as fallbacks
 - Service worker registration in HTML
 
-### Accessibility (target vs current state)
+### Accessibility (v4.4.0 pass — largely delivered)
 
-Accessibility is part of the standing build-quality baseline, but on this app it is only
-**partially delivered** — stated honestly here so the requirement matches reality and backs the
-open audit task:
+A dedicated accessibility pass shipped in **v4.4.0** (driven by the Pre-Live Testing agent), closing
+most of what was previously open. Current state:
 
-- **Done:** keyboard navigation through rota cells in **Manual mode** (arrow keys, Tab/Enter to
-  commit and advance, Escape to revert).
-- **Target / not yet complete:** ARIA labels/roles/states on interactive controls (buttons, tabs,
-  editable cells), tooltips for icon-only buttons and shift cells (shift times), full keyboard
-  operability in auto (click-to-edit) mode, colour not relied on alone to convey shift meaning,
-  and a screen-reader pass. These are tracked by the **"Accessibility audit"** task in tasks.md
-  (currently open, low priority).
-- Treat the above as the accessibility acceptance list; the app should not be described as fully
-  accessible until that audit task is complete.
+- **Keyboard operability (done):** all interactive controls are reachable and operable by keyboard —
+  the Nurses/HouseKeeping tabs (`role="tablist"` + arrow-key nav), the org-name button, the
+  Save/Share and Staff Setup buttons, the Shift Count summary filter cells, and the rota shift cells
+  in **both** Manual mode (type-to-edit, arrow/Tab/Enter/Esc) and **auto mode** (focusable
+  `role="button"`; Enter/Space opens the inline picker, which itself has arrow-key nav + Esc).
+- **ARIA / semantics (done):** roles/labels/states on tabs (`aria-selected`), dialogs
+  (`role="dialog" aria-modal`, focus trap + restore), the inline picker (`role="menu"`), the live
+  regions, and `aria-label`s on icon-only / ambiguous controls (add-off `*`, Staff-Setup
+  rename/remove/pair, custom-date + new-staff form fields).
+- **Screen-reader feedback (done):** visually-hidden `aria-live` regions — polite (`#sr-live`, fed by
+  `showToast`) for routine feedback and assertive (`#sr-live-assertive`) for invalid-entry errors.
+- **Colour independence (done):** day-header coverage now carries a non-colour glyph cue (⚠ low /
+  ✕ gap) plus wording in the `title`, so coverage state isn't conveyed by colour alone.
+- **Contrast (done, from v4.2.0):** WCAG AA in both light and dark themes (Lighthouse 100).
+- **Reduced motion (done):** `@media (prefers-reduced-motion: reduce)` quiets hover-scale/animations.
+- **Accepted trade-off:** the dense rota shift-cell **tap-target** on small phones stays below the
+  ~44px guideline — a deliberate choice for a full-month data grid (tapping a cell opens the editor).
+- **Not auto-verifiable:** full WCAG conformance still needs manual assistive-technology testing;
+  the automated audit + this pass cover the high-value structural items.
 
 ---
 

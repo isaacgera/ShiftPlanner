@@ -10,6 +10,7 @@ ShiftPlanner/
 ├── sw.js                ← Service worker (cache-first, offline)
 ├── manifest.json        ← PWA manifest
 ├── icons/               ← PNG app icons (192, 512, maskable-512) + SVG (192, 512, maskable) fallbacks; `generate-png-icons.html` generator
+├── vendor/              ← Locally-vendored libs (v4.4.0): jspdf.umd.min.js + jspdf.plugin.autotable.min.js (pinned, precached, no CDN)
 ├── LICENSE              ← MIT (Copyright (c) 2026 Isaac A. Gera)
 ├── UserGuide.html       ← User documentation
 ├── session-log.md       ← Development history
@@ -391,6 +392,55 @@ the inline-popup edit path above:
 2. **Rule validation (non-blocking):** once a valid code is committed, `validate()` runs for
    coverage / incompatible-pair checks and surfaces any warnings as a **toast only** — it does not
    block the entry. This lets the user build a rota freely and see warnings without being stopped.
+
+---
+
+## PDF Export / Share (v4.4.0)
+
+### Why a generated PDF (not `window.print()`)
+`window.print()` opens the OS print/share sheet in a browser tab, but it is a **silent no-op inside
+an iOS installed PWA** (standalone WebKit exposes no print pipeline). The primary user runs
+ShiftPlanner as an installed PWA on iPhone, so the old path failed exactly where it mattered. The
+Web Share API can share a file into the native sheet, but only a file that already exists in memory —
+it generates nothing. So the app now **builds a real PDF client-side** and hands it to Share (or a
+download), removing the dependency on the OS print pipeline entirely.
+
+### Library (vendored, offline)
+- **jsPDF** (`vendor/jspdf.umd.min.js`) + **jspdf-autotable** (`vendor/jspdf.plugin.autotable.min.js`),
+  pinned versions, **vendored into `vendor/`** — no CDN, no npm, no build step. Both are added to
+  the SW precache so PDF export works fully offline.
+- `jspdf-autotable` renders the rota as a true table (colour-filled cells, borders, header row,
+  automatic page breaks) — chosen over html2canvas, which would flatten the DOM to a fuzzy, large
+  image. Output is vector text: sharp, selectable, small.
+
+### `generatePdfBlob(tab)` — reconstruct from data
+Reads the same data as `render()` (`loadRota`, `loadStaff`, `loadOrgName`) and builds:
+- **Header:** org name (if set) + `ROTA FOR THE MONTH OF <MONTH> <YEAR>`, A4 landscape.
+- **Rota grid:** corner `Name \ Date`, day-of-week + date columns (Sundays marked), one row per
+  active staff member; each shift cell filled with the on-screen shift colour (light-theme token
+  values — the PDF is always light, matching the print-stays-light rule). Coverage colouring on the
+  day-header row mirrors the screen (ok/warn/danger).
+- **Shift Count summary:** same columns as screen (Name, G, M, MA, A, AN, N, O, PL, Total).
+- **Footer note:** the standing "Shifts may change for coverage…" line. The "Powered by Forjé"
+  credit is intentionally omitted (consistent with the existing print exclusion).
+- Returns a `Blob` (`application/pdf`).
+
+### `exportPDF()` — adaptive delivery
+```
+pdf = generatePdfBlob(currentTab)                 // real PDF blob
+file = new File([pdf], "<name>.pdf", {type:'application/pdf'})
+if (navigator.canShare && navigator.canShare({files:[file]}))
+    → navigator.share({files:[file], title})       // iOS/Android incl. installed PWA
+else
+    → download blob via <a download>                // desktop / no file-share
+on any generation error
+    → fall back to legacy window.print() + toast    // never dead-ends
+```
+- Filename `ShiftPlanner <Tab> <Month> <Year>.pdf` (actual for download; suggested for share).
+- `navigator.share` must be called **synchronously in the click gesture** (iOS requirement) — the
+  blob is generated first, then shared, all within the handler.
+- The legacy `window.print()` path (with the `.printing` mobile-clip fix and print-stays-light token
+  reset) is retained as the error fallback and for desktop users who prefer the system dialog.
 
 ---
 

@@ -7,6 +7,44 @@
 
 ---
 
+## v4.4.0 — Real PDF Save/Share + Accessibility pass (Priority: High) — SHIPPED
+
+Fixes: the "Share / Print" button was a silent no-op in the iOS installed PWA (bare `window.print()`
+doesn't work in standalone WebKit). Replaced with a real client-side PDF + adaptive delivery.
+A folded-in accessibility pass (from Pre-Live audit) landed in the same release. Prototype-first,
+then ported. Verified working on a real iPhone. See requirements "Export / Share (v4.4.0)" + design
+"PDF Export / Share".
+
+### Real PDF Save/Share
+- [x] Vendor jsPDF + jspdf-autotable locally into `vendor/` (pinned versions, no CDN/npm)
+- [x] `generatePdfBlob(tab)` — reconstruct rota grid + Shift Count summary from data (A4 landscape, shift colours, boxed header + legend, diagonal Date/Name corner, per-shift-coloured summary headers, heavy outer border, footer note; Forjé credit excluded)
+- [x] Adaptive `exportPDF()` — device-routed: **mobile/touch → `navigator.share({files})`** (native sheet); **desktop → download** the blob; on generation error fall back to legacy `window.print()`. Button relabelled **Save / Share**.
+- [x] Port to live: copied proto → live, vendored files added to SW precache, `APP_VERSION` 4.3.0 → 4.4.0, `CACHE_NAME` v13 → v14
+- [x] Isaac verified on a real iPhone (native share sheet + real PDF); desktop downloads cleanly
+
+### Accessibility pass (Pre-Live audit findings)
+- [x] **B1** — Tabs are real `<button role="tab" aria-selected>` in a `role="tablist"`; `updateTabs()` syncs state; arrow-key navigation between tabs
+- [x] **B2** — Org-name is a `<button>` (keyboard-operable, `aria-label`); styling restored to the original small/muted/own-line look
+- [x] **B3** — Shift Count header + body cells are focusable `role="button"` + `aria-label`; a global Enter/Space handler activates them (skips native buttons + contenteditable manual cells)
+- [x] **B4** — Generated-mode rota shift cells focusable `role="button"` + descriptive `aria-label` → open the picker via keyboard
+- [x] **S3** — Modals/alerts get `role="dialog" aria-modal`, focus moved in + trapped, Esc closes, focus returns to opener; inline shift-picker is `role="menu"` with arrow-key nav + Esc
+- [x] **S4** — Shared `:focus-visible` outline across all interactive controls
+- [x] **S6** — Non-colour coverage cue glyph (⚠ low / ✕ gap) on day headers alongside the colour
+- [x] **S7** — Visually-hidden `aria-live` regions (`#sr-live` polite + `#sr-live-assertive`); `showToast` mirrors to polite, invalid-entry errors to assertive
+- [x] **S8** — `@media (prefers-reduced-motion: reduce)` quiets hover-scale/animations
+- [x] **S1/S-c** — Fully-staffed "*" add-off marker + Staff-Setup rename/remove/pair controls are real buttons with `aria-label`s
+- [x] **N2/N3** — `aria-label`s on the custom-date month/year selects, new-staff input, and incompatible-pair selects
+- Accepted trade-off: **S-a** (dense rota cell tap-target on mobile) left as-is for a full-month data grid
+
+### PWA hardening + release
+- [x] SW `CORE_ASSETS` (atomic) vs `OPTIONAL_ASSETS` (best-effort) split so a vendor/screenshot miss can't fail the offline install; GET-only dynamic-cache guard
+- [x] Manifest `screenshots[]` (wide 1280×720 + narrow 720×1280) added → richer-install-UI warnings cleared; generated via `screenshots/generate-screenshots.html`
+- [x] Pre-Live + PWA Readiness agents re-run against live: "Ready to ship" / "PWA-ready, no blockers"
+- [x] Code committed + pushed (`b43e82c`); docs committed separately after iPhone sign-off
+- [x] Ideas backlog → **Built (ShiftPlanner v4.4.0)** (flipped on this docs pass, post-verification)
+
+---
+
 ## Cleanup & Polish (Priority: High)
 
 - [x] Remove all `console.log` debug statements from `app.js` (Session 6 — also removed a dead no-op diagnostic loop; SW-registration log downgraded to `console.warn`)
@@ -83,7 +121,7 @@ Doc-only clarifications — no functionality changed:
 - [ ] **Print layout fine-tuning:** Test PDF output on different printers/paper sizes; adjust margins if content overflows.
 - [ ] **Mobile responsiveness:** Improve table scrolling and touch targets for phone-sized screens.
 - [x] **Dark mode:** Optional Light/Dark theme with header toggle, `sp_theme` persistence, `prefers-color-scheme` default, WCAG-AA contrast in both themes, flash-of-light guard, print-stays-light (v4.2.0, Session 16).
-- [x] **Keyboard navigation:** Arrow-key + Tab/Enter movement through rota cells (Manual mode, v4.1). Auto-mode cells still use the click-to-edit popup.
+- [x] **Keyboard navigation:** Arrow-key + Tab/Enter movement through rota cells (Manual mode, v4.1). Auto-mode cells now keyboard-operable too — focusable `role="button"`, Enter/Space opens the picker with arrow-key nav (v4.4.0 a11y pass).
 - [ ] **Tooltips on hover:** Show shift time (e.g., "8AM–2PM") when hovering over a cell.
 
 ---

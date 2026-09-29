@@ -70,7 +70,7 @@ kbd{background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:.8rem;font-fa
 
 <div class="card">
 <p><b>Header Row 1:</b> App title + Organisation name | Month title (centered) | Theme toggle (🌙/☀️) + Month picker + Generate + Manual + Save + Undo</p>
-<p><b>Header Row 2:</b> Tabs (Nurses / HouseKeeping) | Shift legend (centered) | Staff Setup + Export PDF</p>
+<p><b>Header Row 2:</b> Tabs (Nurses / HouseKeeping) | Shift legend (centered) | Staff Setup + Save / Share</p>
 <p><b>Main Area:</b> Rota table (names × days) + Shift Count summary table</p>
 </div>
 
@@ -224,21 +224,20 @@ kbd{background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:.8rem;font-fa
 <li>Click outside the summary table to clear highlights</li>
 </ul>
 
-<h2>8. Export PDF / Print</h2>
+<h2>8. Save / Share (as PDF)</h2>
 
 <ol>
-<li>Click <b>Export PDF</b> (bottom-right of header).</li>
-<li>The browser's print dialog opens with:
+<li>Click <b>Save / Share</b> (bottom-right of header).</li>
+<li>ShiftPlanner builds a proper <b>PDF</b> of the current tab's rota — A4 landscape, with the header, organisation name, shift legend, the colour-coded rota grid, and the Shift Count summary.</li>
+<li>What happens next depends on your device:
   <ul>
-    <li>Filename: <kbd>ShiftPlanner Nurses August 2026</kbd> (auto-generated)</li>
-    <li>Layout: A4 Landscape</li>
-    <li>Content: Header + active tab label + legend + rota table + shift count — all within a border</li>
+    <li><b>Phone / tablet (incl. the installed app):</b> your device's <b>Share sheet</b> opens — send the PDF straight to WhatsApp, save it to Files, email it, or AirPrint it.</li>
+    <li><b>Desktop:</b> the PDF <b>downloads</b> (filename <kbd>ShiftPlanner Nurses September 2026.pdf</kbd>); open it to view, print, or share.</li>
   </ul>
 </li>
-<li>Select "Save as PDF" or print directly.</li>
 </ol>
 
-<div class="tip">The PDF is designed to fit on a single A4 landscape page. Share it via WhatsApp or print for wall display.</div>
+<div class="tip">This is the big change in v4.4.0: because the PDF is generated inside the app, <b>Save / Share now works even when ShiftPlanner is installed as an app on your iPhone</b> (previously the button did nothing there). The PDF is always light (clean on paper) and fits a single A4 landscape page — ideal for WhatsApp or the noticeboard. It works offline too.</div>
 
 <h2>9. Monthly Workflow</h2>
 
@@ -248,7 +247,7 @@ kbd{background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:.8rem;font-fa
 <li>Click <b>Generate</b> for an auto-balanced rota, or <b>Manual</b> to build it by hand.</li>
 <li>Review the rota visually — check N-blocks, offs spacing, coverage.</li>
 <li>Make manual adjustments if needed (click cells to edit).</li>
-<li>Click <b>Export PDF</b> to save/print.</li>
+<li>Click <b>Save / Share</b> to save or share the PDF.</li>
 <li>Share the PDF via WhatsApp or pin it on the noticeboard.</li>
 <li>Repeat for HouseKeeping tab.</li>
 </ol>

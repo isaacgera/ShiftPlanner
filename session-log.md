@@ -1293,3 +1293,118 @@ the SW `CACHE_NAME` bumped so the installed PWA pulls the update.
 - `sw.js` — `CACHE_NAME` v12 → v13
 - `prototypes/*` — same fixes iterated first (proto version tag kept at 4.3.0-proto)
 - `session-log.md` — this addendum
+
+---
+
+## Session 19 — Sep 29, 2026
+**v4.4.0 — Real client-side PDF (Save / Share) + Accessibility pass (prototype-first, then ported)**
+**AI Partner:** Forjé
+
+### Context / trigger
+Isaac reported that on the **installed iPhone PWA**, the "Share / Print" button did nothing —
+though it worked fine in a browser tab on the same phone. Root cause: a bare `window.print()` is a
+**silent no-op in iOS standalone WebKit** (installed PWA), which is exactly how his spouse uses the
+app. Chosen fix (Isaac's call): generate a **real PDF client-side** and hand it to the Web Share
+API / download, removing the dependency on the OS print pipeline.
+
+Started as a Bug Fix, promoted to **Quick Spec** (real dependency + behaviour change), built
+**prototype-first**, then folded in an accessibility pass mid-stream (Option B — do it before
+shipping) after the Pre-Live audit surfaced pre-existing keyboard/ARIA gaps.
+
+### What was built (v4.4.0)
+
+#### Real PDF Save / Share
+- **Vendored jsPDF 2.5.2 + jspdf-autotable 3.8.2** into `vendor/` (pinned, local, no CDN — a
+  deliberate, scoped departure from the zero-dependency rule; both files precached so PDF export
+  works offline). cdnjs only had jsPDF 4.x (breaking), so jsPDF came from unpkg; autotable from cdnjs.
+- **`generatePdfBlob(tab)`** reconstructs the rota from data (not a screenshot): boxed header card
+  (app name + version, org name, tab label + shift legend), diagonal Date/Name corner, colour-coded
+  rota grid (coverage-coloured day headers, Sunday-red dates), per-shift-coloured Shift Count summary
+  (compact/left-aligned), heavy outer border, footer note. A4 landscape, always light. Forjé credit
+  excluded (matches print). Tuned over a couple of rounds to closely match the old print-PDF look
+  ("Option A" full-match; the diagonal corner rendered cleanly so no fallback needed).
+- **Adaptive `exportPDF()` — device-routed** (final behaviour after Isaac's desktop feedback):
+  - **Mobile / touch** (incl. installed iPhone PWA) → `navigator.share({files})` → native share
+    sheet (WhatsApp, Save to Files, Print).
+  - **Desktop** → straight **download** to Downloads (no share panel — desktop supports file-share
+    too, but a share sheet there is an unwanted extra step). Uses an `isMobileDevice()` helper
+    (coarse-pointer + no-fine-pointer media query, UA fallback).
+  - Generation error → legacy `window.print()` fallback so the button never dead-ends.
+- **Button relabelled** "Share / Print" → **"Save / Share"** (label only; logic unchanged) to match
+  what actually happens per device (save on desktop, share on mobile).
+
+#### Debugging note (for the record)
+Early desktop testing looked "too good to be true" — turned out `generatePdfBlob` was **throwing at
+the outer-border `doc.rect()`** (autotable 3.x doesn't expose `t.width`), so it was silently falling
+back to the *old* `window.print()` path (hence the familiar-looking output). Caught via a temporary
+persistent diagnostic banner + console log showing which branch ran. Fixed by computing table width
+from summed column widths with finite-guards, and wrapping the border + `didDrawCell` hook in
+try/catch so a decoration glitch can never sink the whole PDF. Diagnostics stripped before porting.
+
+#### Accessibility pass (folded in — from the Pre-Live Testing agent)
+Closed the audit's blockers/should-fixes (B1–B4, S1, S3, S4, S6, S7, S8, S-b, S-c, N2/N3):
+tabs → real `role="tab"` buttons in a `role="tablist"` with arrow-key nav; org-name → button;
+Shift Count cells + generated-mode rota cells → focusable `role="button"` activated by a global
+Enter/Space handler (which skips contenteditable manual cells); dialogs get `role="dialog"
+aria-modal` + focus trap/restore/Esc; inline shift-picker → `role="menu"` + arrow-key nav;
+shared `:focus-visible`; two `aria-live` regions (polite `#sr-live` fed by `showToast`, assertive
+`#sr-live-assertive` for invalid entries); non-colour coverage cue glyph (⚠/✕); reduced-motion
+block; `aria-label`s on icon-only + form controls. Accepted the mobile tap-target trade-off (S-a)
+for the dense grid. Applied to **both** live and prototype.
+
+#### PWA hardening + manifest screenshots
+- `sw.js` split into **CORE_ASSETS** (atomic `addAll` — shell + icons + manifest) and
+  **OPTIONAL_ASSETS** (vendor libs + screenshots, best-effort `cache.add().catch()`), so a missing
+  optional asset can't fail the SW install and kill offline. Added a GET-only guard on the dynamic
+  cache put.
+- Added manifest `screenshots[]` (wide 1280×720 + narrow 720×1280) → cleared the two
+  "Richer PWA Install UI" warnings. Screenshots produced by a new zero-dependency canvas generator,
+  `screenshots/generate-screenshots.html` (same pattern as the icon generator; Isaac ran it).
+
+#### Org-name visual regression (caught + fixed)
+Converting org-name from `<span>` to `<button>` (B2) made it lose the `header h1 span` styling
+(`font:inherit` pulled the h1's 1.4rem). Restored to the original small/muted/own-line look
+(`font-size:.8rem; font-weight:400; display:block; text-align:left`) in both live + prototype.
+
+### Release chores
+- `APP_VERSION` **4.3.0 → 4.4.0**; SW `CACHE_NAME` **shiftplanner-v13 → v14**.
+- Prototype `APP_VERSION` `4.4.0-proto`; proto banner refreshed.
+
+### Verification
+- IDE diagnostics clean on all app/PWA/prototype files (spec files show only the pre-existing
+  Kiro-template heading warnings — Isaac's own heading style; no new errors).
+- **Pre-Live Testing agent** re-run against the live app: *"Ready to ship — all 14 fixes verified, no
+  regressions."* **PWA Readiness agent** re-run: *"PWA-ready, no blockers."*
+- **Isaac verified on a real iPhone: Save / Share works — native share sheet + real PDF.** ✓
+  Desktop confirmed to download cleanly.
+
+### Deploy (two commits, by Isaac's request)
+1. **Code/app/PWA + prototype + `vendor/` + `screenshots/`** committed + pushed first
+   (`b43e82c`, `7ceee94..b43e82c main -> main`) so Isaac could install + test on the iPhone before
+   docs were finalised.
+2. **Docs** (this log, UserGuide, overview, SPEC trilogy) held back, then committed + pushed after
+   the iPhone sign-off.
+- Note: GitHub warned the repo moved to `.../ShiftPlanner.git` (case); push still succeeded via the
+  old lowercase remote URL. Cosmetic — remote URL can be updated later.
+
+### Backlog
+- `Ideas/Ideas.md` row → **Built (ShiftPlanner v4.4.0)** (flipped after the on-device iPhone
+  verification, per the sign-off rule).
+
+### Files Modified
+- `app.js` — `PDF_SHIFT_COLORS`/`PDF_COV`, `generatePdfBlob(tab)`, adaptive `exportPDF()` +
+  `isMobileDevice()`, `printFallback()`, a11y (tabs/summary/shift-cell markup, `updateTabs`,
+  `showModal`/dialog focus system, global keydown handlers, `announce`/`announceError`,
+  `editShift` picker, `wireTabKeys`), `APP_VERSION` 4.4.0, `SP.generatePdfBlob`
+- `ShiftPlanner.html` — vendor `<script>` tags, `#sr-live`/`#sr-live-assertive`, tabs→buttons+tablist,
+  org-name→button, a11y CSS block (+ org-name-btn styling fix), Save/Share button label
+- `sw.js` — CORE/OPTIONAL precache split, GET-only guard, `CACHE_NAME` v14
+- `manifest.json` — `screenshots[]` (wide + narrow)
+- `vendor/` — jspdf.umd.min.js (2.5.2) + jspdf.plugin.autotable.min.js (3.8.2) — **new**
+- `screenshots/` — generate-screenshots.html + screenshot-wide.png + screenshot-narrow.png — **new**
+- `prototypes/ShiftPlanner-prototype.html` + `app-proto.js` — same feature + a11y build (proto-tagged)
+- `UserGuide.html` — "Save / Share (as PDF)" section rewrite, header-row + workflow label updates
+- `overview.html` — v4.4.0 blurb + version
+- `.kiro/specs/ShiftPlanner/*` — v4.4.0 Export/Share + a11y documented (requirements/design/tasks)
+- `Ideas/Ideas.md` (backlog) — row → Built (ShiftPlanner v4.4.0)
+- `session-log.md` — this entry
