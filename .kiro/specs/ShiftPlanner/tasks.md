@@ -2,7 +2,7 @@
 
 ## Status Legend
 - [ ] Not started
-- [~] In progress
+- [ ] In progress
 - [x] Complete
 
 ---
