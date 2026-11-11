@@ -3,7 +3,7 @@
 ## Project Info
 - **App Name:** ShiftPlanner
 - **Institution:** Sanctum Natural Birth Centre
-- **Location:** `C:\Users\615509493\OneDrive - BT Plc\Data Drive\Personal\Learning\Kiro\Projects\hospital-tools\ShiftPlanner\`
+- **Location:** `...\Kiro\Projects\hospital-tools\ShiftPlanner\` (local workspace)
 - **AI Partner:** Forje
 - **Files:** `ShiftPlanner.html` (UI/CSS), `rules.js` (configurable rules), `app.js` (logic)
 
